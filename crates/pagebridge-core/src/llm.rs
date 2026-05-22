@@ -150,7 +150,6 @@ pub trait LlmProvider: Send + Sync + 'static {
 
 /// Deterministic mock provider for tests. Returns canned responses or echoes
 /// the last user message.
-#[cfg(any(test, feature = "test-mock"))]
 pub mod echo {
     use super::{
         ChatMessage, ChatRole, CompletionRequest, CompletionResponse, FinishReason, LlmProvider,
@@ -231,5 +230,4 @@ pub mod echo {
     }
 }
 
-#[cfg(any(test, feature = "test-mock"))]
 pub use echo::EchoLlmProvider;

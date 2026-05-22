@@ -14,11 +14,11 @@ pub mod types;
 
 pub use adapter::StorageAdapter;
 pub use error::{PagebridgeError, Result};
+pub use id::{DocId, NodeId};
 pub use llm::{
     ChatMessage, ChatRole, CompletionRequest, CompletionResponse, FinishReason, LlmConfig,
     LlmProvider,
 };
-pub use id::{DocId, NodeId};
 pub use record::{NodeLevel, NodeRecord, NodeSummary};
 pub use types::{
     AdapterStats, Answer, Citation, DocumentEntry, DocumentHandle, IngestParams, Navigation,

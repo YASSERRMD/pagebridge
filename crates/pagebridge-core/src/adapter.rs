@@ -5,8 +5,6 @@
 //! holds the storage itself. This is what makes the same engine work against
 //! Postgres, SQLite, MongoDB, an embedded redb+tantivy store, or plain JSON.
 
-use std::collections::BTreeMap;
-
 use async_trait::async_trait;
 
 use crate::error::Result;
@@ -93,11 +91,9 @@ pub trait StorageAdapter: Send + Sync + 'static {
     /// and decode, or use the backend's native string accessor.
     async fn read_raw_text(&self, doc_id: &DocId, span: (u64, u64)) -> Result<String> {
         let bytes = self.read_raw_span(doc_id, span).await?;
-        String::from_utf8(bytes).map_err(|e| {
-            crate::error::PagebridgeError::Parse {
-                source_kind: "utf8".into(),
-                message: e.to_string(),
-            }
+        String::from_utf8(bytes).map_err(|e| crate::error::PagebridgeError::Parse {
+            source_kind: "utf8".into(),
+            message: e.to_string(),
         })
     }
 
@@ -117,14 +113,22 @@ pub trait StorageAdapter: Send + Sync + 'static {
 
 /// In-memory adapter for unit-testing higher-level logic.
 ///
-/// Not for production. Lives behind `cfg(any(test, feature = "test-mock"))`.
-#[cfg(any(test, feature = "test-mock"))]
+/// Not for production: BM25 is approximated by token overlap and the store is
+/// not persistent.
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::assigning_clones,
+    clippy::significant_drop_tightening
+)]
 pub mod memory {
-    use super::{
-        AdapterStats, DocId, DocumentEntry, NodeId, NodeRecord, NodeSummary, Result, SearchHit,
-        StorageAdapter, SummaryCacheEntry,
-    };
+    use super::StorageAdapter;
     use crate::error::PagebridgeError;
+    use crate::error::Result;
+    use crate::id::{DocId, NodeId};
+    use crate::record::{NodeRecord, NodeSummary};
+    use crate::types::{AdapterStats, DocumentEntry, SearchHit, SummaryCacheEntry};
     use async_trait::async_trait;
     use dashmap::DashMap;
     use parking_lot::RwLock;
@@ -231,8 +235,7 @@ pub mod memory {
         }
 
         async fn list_documents(&self) -> Result<Vec<DocumentEntry>> {
-            let mut out: Vec<DocumentEntry> =
-                self.docs.iter().map(|r| r.value().clone()).collect();
+            let mut out: Vec<DocumentEntry> = self.docs.iter().map(|r| r.value().clone()).collect();
             out.sort_by(|a, b| a.doc_id.cmp(&b.doc_id));
             Ok(out)
         }
@@ -269,7 +272,11 @@ pub mod memory {
                     }
                 })
                 .collect();
-            hits.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+            hits.sort_by(|a, b| {
+                b.score
+                    .partial_cmp(&a.score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
             hits.truncate(limit);
             Ok(hits)
         }
@@ -348,18 +355,10 @@ pub mod memory {
         if query.is_empty() {
             return 0.0;
         }
-        let hay: std::collections::HashSet<&str> =
-            haystack.iter().map(String::as_str).collect();
+        let hay: std::collections::HashSet<&str> = haystack.iter().map(String::as_str).collect();
         let matched = query.iter().filter(|t| hay.contains(t.as_str())).count();
         matched as f32 / query.len() as f32
     }
 }
 
-// Re-export the mock adapter at the module level when enabled.
-#[cfg(any(test, feature = "test-mock"))]
 pub use memory::MemoryAdapter;
-
-// Discourage unused imports when the mock is off.
-#[cfg(not(any(test, feature = "test-mock")))]
-#[allow(dead_code)]
-const _UNUSED_IMPORTS: Option<BTreeMap<u8, u8>> = None;
