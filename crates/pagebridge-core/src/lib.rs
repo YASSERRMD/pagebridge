@@ -9,6 +9,7 @@ pub mod adapter;
 pub mod error;
 pub mod id;
 pub mod llm;
+pub mod prompts;
 pub mod record;
 pub mod types;
 
@@ -19,6 +20,7 @@ pub use llm::{
     ChatMessage, ChatRole, CompletionRequest, CompletionResponse, FinishReason, LlmConfig,
     LlmProvider,
 };
+pub use prompts::{PromptContext, PromptLibrary};
 pub use record::{NodeLevel, NodeRecord, NodeSummary};
 pub use types::{
     AdapterStats, Answer, Citation, DocumentEntry, DocumentHandle, IngestParams, Navigation,
