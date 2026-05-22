@@ -1,0 +1,37 @@
+[package]
+name = "pagebridge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Cognitive retrieval for the database you already have. Umbrella crate."
+
+[dependencies]
+pagebridge-core.workspace = true
+pagebridge-adapter-postgres = { workspace = true, optional = true }
+pagebridge-adapter-sqlite = { workspace = true, optional = true }
+pagebridge-adapter-mongodb = { workspace = true, optional = true }
+pagebridge-adapter-embedded = { workspace = true, optional = true }
+pagebridge-adapter-jsonfile = { workspace = true, optional = true }
+pagebridge-llm-ollama = { workspace = true, optional = true }
+pagebridge-llm-openai = { workspace = true, optional = true }
+pagebridge-llm-anthropic = { workspace = true, optional = true }
+
+[features]
+default = ["sqlite", "embedded", "jsonfile", "ollama", "openai"]
+postgres = ["dep:pagebridge-adapter-postgres"]
+sqlite = ["dep:pagebridge-adapter-sqlite"]
+mongodb = ["dep:pagebridge-adapter-mongodb"]
+embedded = ["dep:pagebridge-adapter-embedded"]
+jsonfile = ["dep:pagebridge-adapter-jsonfile"]
+ollama = ["dep:pagebridge-llm-ollama"]
+openai = ["dep:pagebridge-llm-openai"]
+anthropic = ["dep:pagebridge-llm-anthropic"]
+all-adapters = ["postgres", "sqlite", "mongodb", "embedded", "jsonfile"]
+all-llms = ["ollama", "openai", "anthropic"]
+full = ["all-adapters", "all-llms"]
+
+[lints]
+workspace = true
