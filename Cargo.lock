@@ -2054,6 +2054,7 @@ dependencies = [
 name = "pagebridge"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "pagebridge-adapter-embedded",
  "pagebridge-adapter-jsonfile",
  "pagebridge-adapter-mongodb",
@@ -2063,6 +2064,8 @@ dependencies = [
  "pagebridge-llm-anthropic",
  "pagebridge-llm-ollama",
  "pagebridge-llm-openai",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
