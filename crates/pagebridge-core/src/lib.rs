@@ -8,11 +8,16 @@
 pub mod adapter;
 pub mod error;
 pub mod id;
+pub mod llm;
 pub mod record;
 pub mod types;
 
 pub use adapter::StorageAdapter;
 pub use error::{PagebridgeError, Result};
+pub use llm::{
+    ChatMessage, ChatRole, CompletionRequest, CompletionResponse, FinishReason, LlmConfig,
+    LlmProvider,
+};
 pub use id::{DocId, NodeId};
 pub use record::{NodeLevel, NodeRecord, NodeSummary};
 pub use types::{
