@@ -1951,7 +1951,14 @@ dependencies = [
 name = "pagebridge-adapter-jsonfile"
 version = "0.0.1"
 dependencies = [
+ "async-trait",
  "pagebridge-core",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
