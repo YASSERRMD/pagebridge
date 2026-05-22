@@ -2275,7 +2275,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "pagebridge-adapter-embedded",
@@ -2293,7 +2293,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-embedded"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "bincode",
@@ -2310,7 +2310,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-jsonfile"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -2324,7 +2324,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-mongodb"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "futures",
@@ -2340,7 +2340,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-postgres"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -2355,7 +2355,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-sqlite"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -2369,7 +2369,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-cli"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2387,7 +2387,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-core"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "dashmap",
@@ -2403,7 +2403,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-anthropic"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -2417,7 +2417,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-ollama"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -2431,7 +2431,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-openai"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -2445,7 +2445,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-py"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "pagebridge",
  "pagebridge-core",
