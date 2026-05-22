@@ -14,6 +14,19 @@ path = "src/main.rs"
 
 [dependencies]
 pagebridge-core.workspace = true
+pagebridge = { workspace = true, features = ["full"] }
+clap.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml = "0.8"
+console.workspace = true
+indicatif.workspace = true
+dirs = "5"
+
+[dev-dependencies]
+assert_cmd = "2"
 
 [lints]
 workspace = true
