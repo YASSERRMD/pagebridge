@@ -15,7 +15,8 @@
     clippy::single_match_else,
     clippy::or_fun_call,
     clippy::cast_lossless,
-    clippy::match_same_arms
+    clippy::match_same_arms,
+    clippy::cognitive_complexity
 )]
 
 use std::time::Duration;
