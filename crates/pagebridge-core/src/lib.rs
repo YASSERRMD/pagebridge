@@ -6,12 +6,15 @@
 //! depend on this one.
 
 pub mod adapter;
+pub mod citation;
 pub mod error;
 pub mod id;
 pub mod ingest;
 pub mod llm;
 pub mod prompts;
 pub mod record;
+pub mod search;
+pub mod trace;
 pub mod types;
 
 pub use adapter::StorageAdapter;
