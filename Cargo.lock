@@ -2096,7 +2096,14 @@ dependencies = [
 name = "pagebridge-llm-anthropic"
 version = "0.0.1"
 dependencies = [
+ "async-trait",
  "pagebridge-core",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "wiremock",
 ]
 
 [[package]]
