@@ -7,9 +7,11 @@
 
 pub mod error;
 pub mod id;
+pub mod record;
 
 pub use error::{PagebridgeError, Result};
 pub use id::{DocId, NodeId};
+pub use record::{NodeLevel, NodeRecord, NodeSummary};
 
 /// Crate version string, used by the CLI and by trace metadata.
 #[must_use]
