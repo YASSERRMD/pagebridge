@@ -5,11 +5,13 @@
 //! engine. Higher-level crates (adapters, LLM providers, the umbrella crate)
 //! depend on this one.
 
+pub mod adapter;
 pub mod error;
 pub mod id;
 pub mod record;
 pub mod types;
 
+pub use adapter::StorageAdapter;
 pub use error::{PagebridgeError, Result};
 pub use id::{DocId, NodeId};
 pub use record::{NodeLevel, NodeRecord, NodeSummary};
