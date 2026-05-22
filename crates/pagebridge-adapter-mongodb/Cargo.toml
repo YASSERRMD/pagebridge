@@ -10,6 +10,18 @@ description = "MongoDB storage adapter for pagebridge"
 
 [dependencies]
 pagebridge-core.workspace = true
+async-trait.workspace = true
+tokio.workspace = true
+mongodb.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+futures.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+testcontainers.workspace = true
+testcontainers-modules = { workspace = true }
 
 [lints]
 workspace = true
