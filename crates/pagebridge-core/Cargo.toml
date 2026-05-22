@@ -18,6 +18,7 @@ dashmap.workspace = true
 parking_lot.workspace = true
 tracing.workspace = true
 tokio = { workspace = true, features = ["sync", "macros", "rt"] }
+pdf-extract.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
