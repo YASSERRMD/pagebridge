@@ -8,5 +8,18 @@ authors.workspace = true
 repository.workspace = true
 description = "Core algorithms, traits, and types for pagebridge"
 
+[dependencies]
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[features]
+default = []
+test-mock = []
+
 [lints]
 workspace = true
