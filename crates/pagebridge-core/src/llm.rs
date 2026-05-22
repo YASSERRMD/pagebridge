@@ -194,12 +194,13 @@ pub mod echo {
         fn name(&self) -> &'static str {
             "echo"
         }
-        fn model(&self) -> &str {
+        fn model(&self) -> &'static str {
             "echo-1"
         }
 
         async fn complete(&self, req: CompletionRequest) -> Result<CompletionResponse> {
-            if let Some(r) = self.canned.lock().pop_front() {
+            let canned = self.canned.lock().pop_front();
+            if let Some(r) = canned {
                 return Ok(r);
             }
             let last_user = req
@@ -222,7 +223,8 @@ pub mod echo {
             _req: CompletionRequest,
             _schema: &serde_json::Value,
         ) -> Result<serde_json::Value> {
-            if let Some(v) = self.canned_json.lock().pop_front() {
+            let canned = self.canned_json.lock().pop_front();
+            if let Some(v) = canned {
                 return Ok(v);
             }
             Ok(serde_json::json!({}))

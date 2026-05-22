@@ -10,6 +10,19 @@ description = "Embedded (redb + tantivy) storage adapter for pagebridge"
 
 [dependencies]
 pagebridge-core.workspace = true
+async-trait.workspace = true
+tokio = { workspace = true, features = ["fs", "rt", "sync"] }
+redb.workspace = true
+tantivy.workspace = true
+memmap2.workspace = true
+bincode.workspace = true
+serde.workspace = true
+parking_lot.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tempfile.workspace = true
 
 [lints]
 workspace = true
