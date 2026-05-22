@@ -33,5 +33,14 @@ all-adapters = ["postgres", "sqlite", "mongodb", "embedded", "jsonfile"]
 all-llms = ["ollama", "openai", "anthropic"]
 full = ["all-adapters", "all-llms"]
 
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+anyhow.workspace = true
+serde_json.workspace = true
+
+[[example]]
+name = "quickstart"
+path = "examples/quickstart.rs"
+
 [lints]
 workspace = true

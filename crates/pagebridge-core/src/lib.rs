@@ -8,6 +8,7 @@
 pub mod adapter;
 pub mod citation;
 pub mod error;
+pub mod facade;
 pub mod id;
 pub mod ingest;
 pub mod llm;
@@ -16,6 +17,8 @@ pub mod record;
 pub mod search;
 pub mod trace;
 pub mod types;
+
+pub use facade::{Pagebridge, PagebridgeOptions};
 
 pub use adapter::StorageAdapter;
 pub use error::{PagebridgeError, Result};
