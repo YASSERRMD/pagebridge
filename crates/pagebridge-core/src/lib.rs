@@ -7,6 +7,6 @@
 
 /// Crate version string, used by the CLI and by trace metadata.
 #[must_use]
-pub fn version() -> &'static str {
+pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

@@ -2,6 +2,6 @@
 
 /// Returns the underlying core crate version.
 #[must_use]
-pub fn version() -> &'static str {
+pub const fn version() -> &'static str {
     pagebridge_core::version()
 }
