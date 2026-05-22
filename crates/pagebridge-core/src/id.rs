@@ -12,7 +12,9 @@ use std::str::FromStr;
 use crate::error::{PagebridgeError, Result};
 
 /// Slug identifying a document. Lowercase alphanumeric plus `-` and `_`, length 1..=64.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 pub struct DocId(String);
 
 impl DocId {
@@ -34,10 +36,7 @@ impl DocId {
             return Err(PagebridgeError::InvalidDocId(s.to_owned()));
         }
         for ch in s.chars() {
-            let ok = ch.is_ascii_lowercase()
-                || ch.is_ascii_digit()
-                || ch == '-'
-                || ch == '_';
+            let ok = ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '_';
             if !ok {
                 return Err(PagebridgeError::InvalidDocId(s.to_owned()));
             }
@@ -65,7 +64,9 @@ impl FromStr for DocId {
 /// Examples:
 /// - `doc:carbon-policy-2026` (the document root)
 /// - `doc:carbon-policy-2026/sec:1.2/leaf:7` (a leaf within section 1.2)
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 pub struct NodeId(String);
 
 impl NodeId {
@@ -139,8 +140,7 @@ impl NodeId {
             .strip_prefix("doc:")
             .ok_or_else(|| PagebridgeError::InvalidNodeId(s.to_owned()))?;
         // Reuse DocId rules.
-        DocId::new(doc_slug)
-            .map_err(|_| PagebridgeError::InvalidNodeId(s.to_owned()))?;
+        DocId::new(doc_slug).map_err(|_| PagebridgeError::InvalidNodeId(s.to_owned()))?;
         for seg in segments {
             let (kind, value) = seg
                 .split_once(':')
