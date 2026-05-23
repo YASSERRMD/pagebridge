@@ -254,6 +254,7 @@ pub async fn collect_stream(
         text,
         citations,
         trace,
+        receipt_json: None,
     })
 }
 

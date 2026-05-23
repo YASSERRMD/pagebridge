@@ -23,8 +23,8 @@ pub mod workspace;
 pub mod workspace_handle;
 
 pub use audit_hook::{
-    noop as noop_audit_hook, AskAuditFields, AuditHook, DeleteAuditFields, IngestAuditFields,
-    NoopAuditHook,
+    noop as noop_audit_hook, noop_receipt_issuer, AskAuditFields, AuditHook, DeleteAuditFields,
+    IngestAuditFields, NoopAuditHook, NoopReceiptIssuer, ReceiptIssuanceInputs, ReceiptIssuer,
 };
 pub use facade::{Pagebridge, PagebridgeOptions};
 

@@ -16,7 +16,8 @@ use tokio::task::JoinHandle;
 
 use crate::adapter::StorageAdapter;
 use crate::audit_hook::{
-    noop as noop_audit_hook, AskAuditFields, AuditHook, DeleteAuditFields, IngestAuditFields,
+    noop as noop_audit_hook, noop_receipt_issuer, AskAuditFields, AuditHook, DeleteAuditFields,
+    IngestAuditFields, ReceiptIssuanceInputs, ReceiptIssuer,
 };
 use crate::error::{PagebridgeError, Result};
 use crate::id::DocId;
@@ -40,6 +41,7 @@ pub struct PagebridgeOptions {
     pub trace_storage: Option<TraceStorageMode>,
     pub summary_model_fingerprint: Option<String>,
     pub audit_hook: Option<Arc<dyn AuditHook>>,
+    pub receipt_issuer: Option<Arc<dyn ReceiptIssuer>>,
     pub workspace_id: Option<WorkspaceId>,
     pub adapter_name: Option<String>,
 }
@@ -55,6 +57,7 @@ impl PagebridgeOptions {
             trace_storage: None,
             summary_model_fingerprint: None,
             audit_hook: None,
+            receipt_issuer: None,
             workspace_id: None,
             adapter_name: None,
         }
@@ -64,6 +67,13 @@ impl PagebridgeOptions {
     #[must_use]
     pub fn with_audit_hook(mut self, hook: Arc<dyn AuditHook>) -> Self {
         self.audit_hook = Some(hook);
+        self
+    }
+
+    /// Attach a receipt issuer so every `ask` ships a verifiable receipt.
+    #[must_use]
+    pub fn with_receipt_issuer(mut self, issuer: Arc<dyn ReceiptIssuer>) -> Self {
+        self.receipt_issuer = Some(issuer);
         self
     }
 
@@ -89,6 +99,7 @@ pub(crate) struct PagebridgeInner {
     pub nav_config: NavigationConfig,
     pub ingest_workers: DashMap<DocId, JoinHandle<Result<()>>>,
     pub audit: Arc<dyn AuditHook>,
+    pub receipts: Arc<dyn ReceiptIssuer>,
     pub workspace_id: WorkspaceId,
     pub adapter_name: String,
 }
@@ -115,6 +126,7 @@ impl Pagebridge {
             nav_config: opts.navigation,
             ingest_workers: DashMap::new(),
             audit: opts.audit_hook.unwrap_or_else(noop_audit_hook),
+            receipts: opts.receipt_issuer.unwrap_or_else(noop_receipt_issuer),
             workspace_id: opts.workspace_id.unwrap_or_default(),
             adapter_name: opts.adapter_name.unwrap_or_else(|| "unknown".to_string()),
         };
@@ -349,6 +361,27 @@ impl Pagebridge {
         let _ = Sha256::new(); // (linker hint when sha2 stays only used here)
         let latency_ms = u32::try_from(started.elapsed().as_millis()).unwrap_or(u32::MAX);
         let qhash = sha256_hex(question.as_bytes());
+        let used_node_ids: Vec<crate::id::NodeId> = answer
+            .trace
+            .selected_leaves
+            .clone();
+        let used_hashes: Vec<String> = used_node_ids
+            .iter()
+            .map(|n| sha256_hex(n.as_str().as_bytes()))
+            .collect();
+        let receipt = self
+            .inner
+            .receipts
+            .issue(ReceiptIssuanceInputs {
+                workspace_id: self.inner.workspace_id.clone(),
+                question: question.to_owned(),
+                answer_text: answer.text.clone(),
+                used_node_ids,
+                used_node_content_hashes: used_hashes,
+                prompt_versions: std::collections::BTreeMap::new(),
+            })
+            .await;
+        answer.receipt_json = receipt;
         self.inner
             .audit
             .on_ask(AskAuditFields {

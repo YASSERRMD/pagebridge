@@ -44,6 +44,7 @@ pub async fn synthesize_answer(
             text: "No relevant content was found for that question.".to_owned(),
             citations: vec![],
             trace: trace_data,
+            receipt_json: None,
         });
     }
 
@@ -78,5 +79,6 @@ pub async fn synthesize_answer(
         text: clean_text,
         citations,
         trace: trace_data,
+        receipt_json: None,
     })
 }

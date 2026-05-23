@@ -200,6 +200,12 @@ pub struct Answer {
     pub text: String,
     pub citations: Vec<Citation>,
     pub trace: QueryTrace,
+    /// Optional Verifiable Answer Receipt (Phase 39). Populated when an
+    /// audit + receipt subsystem is configured; serialized as canonical
+    /// JSON so downstream consumers can verify without depending on
+    /// pagebridge-receipt directly.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub receipt_json: Option<serde_json::Value>,
 }
 
 /// Lower-level navigation result that omits the synthesis step.

@@ -65,3 +65,36 @@ impl AuditHook for NoopAuditHook {
 pub fn noop() -> Arc<dyn AuditHook> {
     Arc::new(NoopAuditHook)
 }
+
+/// Bag of inputs the facade hands to a `ReceiptIssuer` after every ask.
+/// The issuer transforms it into a signed `AnswerReceipt` (Phase 39) and
+/// returns it as canonical JSON. We keep the trait in pagebridge-core so
+/// the facade does not have to depend on the receipt crate directly.
+#[derive(Debug, Clone)]
+pub struct ReceiptIssuanceInputs {
+    pub workspace_id: WorkspaceId,
+    pub question: String,
+    pub answer_text: String,
+    pub used_node_ids: Vec<crate::id::NodeId>,
+    pub used_node_content_hashes: Vec<String>,
+    pub prompt_versions: std::collections::BTreeMap<String, u32>,
+}
+
+#[async_trait::async_trait]
+pub trait ReceiptIssuer: Send + Sync + 'static {
+    async fn issue(&self, inputs: ReceiptIssuanceInputs) -> Option<serde_json::Value>;
+}
+
+pub struct NoopReceiptIssuer;
+
+#[async_trait::async_trait]
+impl ReceiptIssuer for NoopReceiptIssuer {
+    async fn issue(&self, _: ReceiptIssuanceInputs) -> Option<serde_json::Value> {
+        None
+    }
+}
+
+#[must_use]
+pub fn noop_receipt_issuer() -> Arc<dyn ReceiptIssuer> {
+    Arc::new(NoopReceiptIssuer)
+}
