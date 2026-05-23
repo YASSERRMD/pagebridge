@@ -33,6 +33,8 @@ pub use pagebridge_adapter_sqlite::SqliteAdapter;
 
 #[cfg(feature = "anthropic")]
 pub use pagebridge_llm_anthropic::AnthropicProvider;
+#[cfg(feature = "llamacpp")]
+pub use pagebridge_llm_llamacpp::{LlamaCppConfig, LlamaCppProvider};
 #[cfg(feature = "ollama")]
 pub use pagebridge_llm_ollama::OllamaProvider;
 #[cfg(feature = "openai")]
@@ -86,6 +88,28 @@ pub async fn mongo_with_anthropic(
 ) -> Result<Pagebridge> {
     let storage = Arc::new(MongoAdapter::connect(url, db).await?);
     let llm = Arc::new(AnthropicProvider::new(api_key, model));
+    Pagebridge::new(storage, llm).await
+}
+
+#[cfg(all(feature = "sqlite", feature = "llamacpp"))]
+/// Quickstart: SQLite + an embedded llama.cpp GGUF.
+pub async fn sqlite_with_llamacpp(
+    path: impl AsRef<std::path::Path>,
+    gguf: impl AsRef<std::path::Path>,
+) -> Result<Pagebridge> {
+    let storage = Arc::new(SqliteAdapter::open(path).await?);
+    let llm = Arc::new(LlamaCppProvider::from_gguf(gguf)?);
+    Pagebridge::new(storage, llm).await
+}
+
+#[cfg(all(feature = "embedded", feature = "llamacpp"))]
+/// Quickstart: embedded (redb + tantivy) + an embedded llama.cpp GGUF.
+pub async fn embedded_with_llamacpp(
+    path: impl AsRef<std::path::Path>,
+    gguf: impl AsRef<std::path::Path>,
+) -> Result<Pagebridge> {
+    let storage = Arc::new(EmbeddedAdapter::open(path)?);
+    let llm = Arc::new(LlamaCppProvider::from_gguf(gguf)?);
     Pagebridge::new(storage, llm).await
 }
 
