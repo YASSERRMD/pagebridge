@@ -1,0 +1,30 @@
+[package]
+name = "pagebridge-mcp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Model Context Protocol server for pagebridge"
+
+[dependencies]
+pagebridge-core.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "io-util", "io-std"] }
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+axum = { workspace = true, optional = true }
+tower = { workspace = true, optional = true }
+
+[features]
+default = ["stdio"]
+stdio = []
+http = ["dep:axum", "dep:tower"]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "io-util"] }
+
+[lints]
+workspace = true

@@ -95,6 +95,8 @@ enum Cmd {
         #[arg(long)]
         stream: bool,
     },
+    /// Run the Model Context Protocol server over stdio (for Claude Code / Desktop / Cursor).
+    Mcp,
     /// Run the built-in admin web UI and JSON API.
     Serve {
         /// Address to bind. Defaults to 127.0.0.1:7676.
@@ -305,6 +307,11 @@ async fn main() -> Result<()> {
                     answer.trace.total_output_tokens,
                 );
             }
+        }
+        Cmd::Mcp => {
+            let cfg = PbConfig::load(&config_path).unwrap_or_default();
+            let bridge = open_bridge(&cfg).await?;
+            pagebridge::mcp::serve_stdio(bridge).await?;
         }
         Cmd::Serve { bind, insecure_allow_remote } => {
             let cfg = PbConfig::load(&config_path).unwrap_or_default();
