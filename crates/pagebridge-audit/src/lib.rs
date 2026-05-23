@@ -33,6 +33,7 @@ pub mod merkle;
 pub mod sign;
 pub mod sinks;
 pub mod transparency;
+pub mod verifier;
 pub mod writer;
 
 pub use error::{AuditError, Result};
@@ -46,4 +47,5 @@ pub use sign::{
     canonical_event_hash, seal_event, verify_event, SignatureVerifier, SigningSecret,
 };
 pub use transparency::{NoopTransparencyClient, TransparencyClient, TrillianEntry};
+pub use verifier::{replay_chain, verify_batch, ReplayReport};
 pub use writer::{AuditSink, AuditWriter, WriterConfig};
