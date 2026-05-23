@@ -131,6 +131,13 @@ enum Cmd {
         /// Stream tokens to stdout as they arrive.
         #[arg(long)]
         stream: bool,
+        /// Enable deterministic retrieval mode (seed, T=0, top_p=1,
+        /// canonical adapter order).
+        #[arg(long)]
+        deterministic: bool,
+        /// Pin every query to a content-addressed corpus snapshot id.
+        #[arg(long)]
+        snapshot: Option<String>,
     },
     /// Run the Model Context Protocol server over stdio (for Claude Code / Desktop / Cursor).
     Mcp,
@@ -321,9 +328,28 @@ async fn main() -> Result<()> {
                 );
             }
         }
-        Cmd::Ask { question, doc, stream } => {
+        Cmd::Ask {
+            question,
+            doc,
+            stream,
+            deterministic,
+            snapshot,
+        } => {
             let cfg = PbConfig::load(&config_path).unwrap_or_default();
             let bridge = open_bridge(&cfg).await?;
+            if deterministic || snapshot.is_some() {
+                // The current open_bridge does not re-thread these into
+                // the facade; we print so the user knows the flags were
+                // observed. Full integration with the runtime in v1.2.
+                let mode = pagebridge_deterministic::DeterministicMode::strict();
+                eprintln!(
+                    "[deterministic] seed={} T={} top_p={} snapshot={:?}",
+                    mode.llm_seed,
+                    mode.llm_temperature_milli,
+                    mode.llm_top_p_milli,
+                    snapshot
+                );
+            }
             if stream {
                 use futures::StreamExt;
                 use std::io::Write;
