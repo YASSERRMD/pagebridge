@@ -4,6 +4,24 @@ All notable changes to pagebridge land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [SemVer](https://semver.org/).
 
+## [1.6.0] - 2026-05-23
+
+The "Adversarial Robustness" release. Pagebridge ships first-class
+prompt-injection defenses and hot reload so prompts, providers, and
+policies can change without restarting the process.
+
+### Added
+
+- New crate `pagebridge-injection`: `InstructionDetector` regex set
+  for classic injection patterns, content-addressed `quote_content`
+  delimiter, locked `sandboxed_synthesis_prompt`, hand-curated
+  `red_team_set` benchmark suite.
+- New crate `pagebridge-hotreload`: `Hot<T>` lock-free swap handle
+  (built on arc-swap), `ConfigSource` + `FileSource` polling watcher,
+  `VersionedPrompts` with in-flight `snapshot` semantics so a
+  prompt swap does not retroactively affect a query already in
+  progress.
+
 ## [1.5.0] - 2026-05-23
 
 The "Multi-Tenant Production" release. Pagebridge can be safely
