@@ -4036,6 +4036,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-tenant"
+version = "1.4.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-timetravel"
 version = "1.4.0"
 dependencies = [
