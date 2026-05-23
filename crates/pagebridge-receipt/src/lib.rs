@@ -20,11 +20,13 @@
 #![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
 
 pub mod error;
+pub mod facade_issuer;
 pub mod fingerprint;
 pub mod receipt;
 pub mod verify;
 
 pub use error::{ReceiptError, Result};
+pub use facade_issuer::FacadeReceiptIssuer;
 pub use fingerprint::{LlmFingerprint, NodeReference, PromptVersionMap};
 pub use receipt::{issue_receipt, AnswerReceipt, ReceiptInputs};
 pub use verify::{verify_receipt, ReceiptVerifier};

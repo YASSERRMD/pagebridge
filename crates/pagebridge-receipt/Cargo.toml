@@ -17,6 +17,7 @@ sha2.workspace = true
 hex.workspace = true
 thiserror.workspace = true
 ed25519-dalek = { version = "2.1", features = ["pkcs8"] }
+ulid = { version = "1.1", features = ["serde"] }
 tracing.workspace = true
 async-trait.workspace = true
 tokio = { workspace = true, features = ["sync", "macros", "rt", "fs"] }

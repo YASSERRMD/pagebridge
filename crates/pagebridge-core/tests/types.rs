@@ -159,6 +159,7 @@ fn answer_serde_roundtrip() {
         text: "ok".into(),
         citations: vec![],
         trace,
+        receipt_json: None,
     };
     let s = serde_json::to_string(&a).unwrap();
     let back: Answer = serde_json::from_str(&s).unwrap();

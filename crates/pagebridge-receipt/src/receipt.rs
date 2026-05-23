@@ -10,7 +10,7 @@ use pagebridge_audit::sign::SigningSecret;
 use pagebridge_audit::transparency::TrillianEntry;
 use pagebridge_core::workspace::WorkspaceId;
 
-use crate::error::{ReceiptError, Result};
+use crate::error::Result;
 use crate::fingerprint::{LlmFingerprint, NodeReference, PromptVersionMap};
 
 /// Information used to verify a single answer end-to-end.
