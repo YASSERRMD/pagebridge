@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="docs/assets/banner.png" alt="pagebridge — Cognitive retrieval for the database you already have." width="100%" />
+  <img src="docs/assets/banner.png" alt="pagebridge: cognitive retrieval for the database you already have." width="100%" />
 </p>
 
 <h1 align="center">pagebridge</h1>
 
 <p align="center">
-  <i>Vectorless, LLM-driven hierarchical retrieval — on the database you already have.</i>
+  <i>Vectorless, LLM-driven hierarchical retrieval, on the database you already have.</i>
 </p>
 
 <p align="center">
@@ -20,12 +20,12 @@
 
 ## Why pagebridge
 
-Most retrieval libraries assume you want a vector store. **`pagebridge` does not store, compute, or look up embeddings.** Instead, it builds a hierarchical tree of LLM-written summaries over your documents, persists that tree in **the database you already operate** (Postgres, SQLite, MongoDB, an embedded redb+tantivy store, or plain JSON files), and answers questions by letting an LLM walk that tree — guided by native BM25 — until it finds the right leaves.
+Most retrieval libraries assume you want a vector store. **`pagebridge` does not store, compute, or look up embeddings.** Instead, it builds a hierarchical tree of LLM-written summaries over your documents, persists that tree in **the database you already operate** (Postgres, SQLite, MongoDB, an embedded redb+tantivy store, or plain JSON files), and answers questions by letting an LLM walk that tree, guided by native BM25, until it finds the right leaves.
 
 The result: **no embedding pipeline, no vector index to keep in sync, no separate similarity service**. Just your existing database, an LLM endpoint, and a deterministic explanation of every answer.
 
 - One trait for storage (`StorageAdapter`), one for LLMs (`LlmProvider`).
-- Two-pass ingestion — structure persists instantly, summaries fill in behind a content-hash cache.
+- Two-pass ingestion: structure persists instantly, summaries fill in behind a content-hash cache.
 - The LLM picks where to look. Every navigation step is recorded in a `QueryTrace` returned in-band on every `ask`.
 - Async-first **Rust** API, async **Python** bindings, and a **`pagebridge`** CLI with `--json` output for piping.
 
@@ -34,14 +34,14 @@ The result: **no embedding pipeline, no vector index to keep in sync, no separat
 ## Architecture
 
 <p align="center">
-  <img src="docs/assets/architecture.png" alt="pagebridge end-to-end pipeline — Documents → Ingest → Summarize → Storage Adapter → Ask → Answer + Citations + Trace" width="100%" />
+  <img src="docs/assets/architecture.png" alt="pagebridge end-to-end pipeline: Documents to Ingest to Summarize to Storage Adapter to Ask to Answer + Citations + Trace" width="100%" />
 </p>
 
 Every query goes through the same pipeline:
 
 1. **Ingest** parses Markdown / PDF / plain text and builds a node tree.
 2. **Summarize** runs a two-pass LLM summary over each node, cached by content hash.
-3. **Storage adapter** persists the tree, raw chunks, and summaries — and exposes BM25 native to the backend.
+3. **Storage adapter** persists the tree, raw chunks, and summaries, and exposes BM25 native to the backend.
 4. **Ask** runs an LLM-guided beam navigator over the summary tree, scored by BM25, until it finds the most relevant leaves.
 5. **Answer** is synthesised from those leaves and returned with citations and a complete trace.
 
@@ -53,7 +53,7 @@ For the deep dive, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ### Rust crate
 
-Add `pagebridge` to your `Cargo.toml`, picking the **storage** and **LLM** feature flags you actually want. Nothing is enabled by default — you opt in.
+Add `pagebridge` to your `Cargo.toml`, picking the **storage** and **LLM** feature flags you actually want. Nothing is enabled by default; you opt in.
 
 ```toml
 [dependencies]
@@ -89,11 +89,11 @@ pip install pagebridge
 git clone https://github.com/YASSERRMD/pagebridge.git
 cd pagebridge/crates/pagebridge-py
 
-# Option A — develop into the current venv (fastest for iterating)
+# Option A: develop into the current venv (fastest for iterating)
 pip install maturin
 maturin develop --release
 
-# Option B — build a wheel and install it
+# Option B: build a wheel and install it
 maturin build --release
 pip install ../../target/wheels/pagebridge-0.1.0-*.whl
 
@@ -121,7 +121,7 @@ cargo build -p pagebridge-cli --release
 
 ## Configure your LLM
 
-`pagebridge` talks to LLMs over plain HTTP — no SDKs to install, no SaaS lock-in. Pick a provider, point at its endpoint, give it a model name (and an API key if needed). That's all.
+`pagebridge` talks to LLMs over plain HTTP. No SDKs to install, no SaaS lock-in. Pick a provider, point at its endpoint, give it a model name (and an API key if needed). That's all.
 
 | Provider | What you need | Default endpoint |
 |---|---|---|
@@ -130,7 +130,7 @@ cargo build -p pagebridge-cli --release
 | **OpenAI-compatible** (vLLM, LM Studio, Together, Groq, Azure OpenAI, …) | Base URL + (optional) API key + model name | you supply |
 | **Anthropic** | API key + model name (`claude-sonnet-4-5`, `claude-opus-4-5`, …) | `https://api.anthropic.com` |
 
-### Rust — explicit LLM configuration
+### Rust: explicit LLM configuration
 
 The umbrella crate exposes one-liner constructors that pair a storage adapter with an LLM. Use them when the defaults work for you:
 
@@ -160,7 +160,7 @@ let bridge = mongo_with_anthropic(
 ).await?;
 ```
 
-For anything bespoke — a custom Ollama host, an OpenAI-compatible endpoint, custom timeouts — assemble the storage adapter and LLM provider yourself and hand them to `Pagebridge::new`:
+For anything bespoke (a custom Ollama host, an OpenAI-compatible endpoint, custom timeouts), assemble the storage adapter and LLM provider yourself and hand them to `Pagebridge::new`:
 
 ```rust
 use std::sync::Arc;
@@ -194,7 +194,7 @@ let llm = Arc::new(AnthropicProvider::new(
 ));
 ```
 
-### Python — explicit LLM configuration
+### Python: explicit LLM configuration
 
 The Python facade pairs SQLite or the embedded store with **Ollama**, with the URL and model as explicit kwargs:
 
@@ -204,7 +204,7 @@ import asyncio, pagebridge
 async def main():
     bridge = await pagebridge.Pagebridge.open_sqlite(
         "./demo.db",
-        ollama_url="http://localhost:11434",   # default — override for a remote box
+        ollama_url="http://localhost:11434",   # default; override for a remote box
         model="qwen2.5:7b",                    # any model your Ollama server has pulled
     )
     # … or open_embedded with the same kwargs
@@ -212,7 +212,7 @@ async def main():
 asyncio.run(main())
 ```
 
-### CLI — explicit LLM configuration
+### CLI: explicit LLM configuration
 
 The CLI keeps its config in `~/.config/pagebridge/config.toml` (or `$PAGEBRIDGE_CONFIG`). Switch providers with `pagebridge config set`:
 
@@ -257,7 +257,7 @@ use pagebridge::{sqlite_with_ollama, IngestParams, SourceKind};
 async fn main() -> anyhow::Result<()> {
     // Configure LLM here: SQLite for storage, Ollama serving `qwen2.5:7b`.
     // (Swap to embedded_with_ollama / postgres_with_openai / mongo_with_anthropic
-    //  to change backends or providers — see "Configure your LLM" above.)
+    //  to change backends or providers; see "Configure your LLM" above.)
     let bridge = sqlite_with_ollama("./demo.db", "qwen2.5:7b").await?;
 
     let handle = bridge.ingest_document(IngestParams {
@@ -311,7 +311,7 @@ asyncio.run(main())
 # 1. Initialise a SQLite store
 pagebridge init sqlite --path ./demo.db
 
-# 2. Configure the LLM (any provider — see "Configure your LLM" above)
+# 2. Configure the LLM (any provider; see "Configure your LLM" above)
 pagebridge config set llm.provider ollama
 pagebridge config set llm.base_url http://localhost:11434
 pagebridge config set llm.model    qwen2.5:7b
@@ -346,15 +346,15 @@ See [`docs/ADAPTERS.md`](docs/ADAPTERS.md) for schema, indexing, and connection 
 | OpenAI-compatible  | `POST /v1/chat/completions` | `response_format: json_object` | `openai`   |
 | Anthropic          | `POST /v1/messages`       | Tool-use forcing           | `anthropic`    |
 
-Anything OpenAI-compatible (Groq, Together, vLLM, LM Studio, Azure OpenAI) plugs into the `openai` provider — just change the base URL. See [`docs/LLM_PROVIDERS.md`](docs/LLM_PROVIDERS.md).
+Anything OpenAI-compatible (Groq, Together, vLLM, LM Studio, Azure OpenAI) plugs into the `openai` provider; just change the base URL. See [`docs/LLM_PROVIDERS.md`](docs/LLM_PROVIDERS.md).
 
 ---
 
 ## How it compares
 
-- **PageIndex** — same hierarchical, vectorless thesis. `pagebridge` adds a pluggable storage layer (the tree lives in your existing database, not in a sidecar JSON file), a pluggable LLM layer, async Rust, Python and CLI bindings, and first-class trace explainability.
-- **ReasonDB / similar LLM-DBs** — focus on natural-language SQL over structured data. `pagebridge` focuses on retrieval over unstructured documents.
-- **LlamaIndex / LangChain RAG** — vector-first by default. `pagebridge` deliberately occupies the no-vector lane: no embeddings, no ANN index, no embedding model to swap.
+- **PageIndex**: same hierarchical, vectorless thesis. `pagebridge` adds a pluggable storage layer (the tree lives in your existing database, not in a sidecar JSON file), a pluggable LLM layer, async Rust, Python and CLI bindings, and first-class trace explainability.
+- **ReasonDB / similar LLM-DBs**: focus on natural-language SQL over structured data. `pagebridge` focuses on retrieval over unstructured documents.
+- **LlamaIndex / LangChain RAG**: vector-first by default. `pagebridge` deliberately occupies the no-vector lane: no embeddings, no ANN index, no embedding model to swap.
 
 ---
 
