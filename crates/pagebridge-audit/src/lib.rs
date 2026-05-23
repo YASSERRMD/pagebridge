@@ -31,6 +31,7 @@ pub mod error;
 pub mod event;
 pub mod merkle;
 pub mod sign;
+pub mod writer;
 
 pub use error::{AuditError, Result};
 pub use event::{
@@ -42,3 +43,4 @@ pub use merkle::{
 pub use sign::{
     canonical_event_hash, seal_event, verify_event, SignatureVerifier, SigningSecret,
 };
+pub use writer::{AuditSink, AuditWriter, WriterConfig};
