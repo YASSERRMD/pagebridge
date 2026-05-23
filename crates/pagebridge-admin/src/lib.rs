@@ -76,11 +76,11 @@ struct AppState {
 }
 
 /// Build the Axum router. Exposed for in-process testing.
-#[must_use]
 pub fn router(bridge: Pagebridge) -> Router {
     let state = AppState {
         bridge: Arc::new(bridge),
     };
+    pagebridge_obs::init();
     Router::new()
         .route("/", get(index_html))
         .route("/api/health", get(health))
@@ -91,9 +91,21 @@ pub fn router(bridge: Pagebridge) -> Router {
         .route("/api/nodes/:id/children", get(get_children))
         .route("/api/ask", post(ask))
         .route("/api/ask/stream", post(ask_stream))
+        .route("/metrics", get(metrics_endpoint))
         .with_state(state)
         .layer(CorsLayer::very_permissive())
         .layer(TraceLayer::new_for_http())
+}
+
+async fn metrics_endpoint() -> Response {
+    match pagebridge_obs::encode_text() {
+        Ok(body) => (
+            [(header::CONTENT_TYPE, "text/plain; version=0.0.4")],
+            body,
+        )
+            .into_response(),
+        Err(e) => api_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
 async fn index_html() -> impl IntoResponse {
@@ -226,8 +238,7 @@ async fn ask_stream(State(s): State<AppState>, Json(body): Json<AskBody>) -> Res
 
 fn serialize_chunk(chunk: &AnswerChunk) -> String {
     serde_json::to_string(chunk)
-        .map(|s| s + "\n")
-        .unwrap_or_else(|_| String::from("{\"kind\":\"error\"}\n"))
+        .map_or_else(|_| String::from("{\"kind\":\"error\"}\n"), |s| s + "\n")
 }
 
 fn api_error(status: StatusCode, message: &str) -> Response {
