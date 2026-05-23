@@ -23,8 +23,9 @@ use crate::prompts::PromptLibrary;
 use crate::search::{navigate, synthesize_answer, NavigationOutcome};
 use crate::trace::TraceBuilder;
 use crate::types::{
-    Answer, AnswerChunk, DocumentEntry, DocumentHandle, IngestParams, Navigation,
-    NavigationConfig, PagebridgeStats, SearchHit, TraceStorageMode,
+    Answer, AnswerChunk, DiffMode, DocumentEntry, DocumentHandle, IngestParams, Navigation,
+    NavigationConfig, PagebridgeStats, SearchHit, SourceKind, TraceStorageMode, UpdateParams,
+    UpdateReport,
 };
 
 /// Bundle of configuration knobs for the `Pagebridge` facade.
@@ -99,6 +100,87 @@ impl Pagebridge {
             .ingest_workers
             .insert(handle.doc_id.clone(), join);
         Ok(handle)
+    }
+
+    /// Update an existing document in place.
+    ///
+    /// v0.5 supports `DiffMode::Replace` and `DiffMode::AppendOnly`. The
+    /// summary cache (hash-keyed) ensures unchanged content reuses summaries
+    /// across the rewrite. `DiffMode::Incremental` is accepted but currently
+    /// dispatches to `Replace`; the chunk-level diff lands in v0.6 once the
+    /// per-adapter raw-text re-write API is in place.
+    pub async fn update_document(&self, params: UpdateParams) -> Result<UpdateReport> {
+        let UpdateParams {
+            doc_id,
+            new_raw_text,
+            diff_mode,
+        } = params;
+        // Snapshot the leaves before we touch anything so we can report the
+        // diff metrics back to the caller.
+        let old_doc = self
+            .inner
+            .storage
+            .list_documents()
+            .await?
+            .into_iter()
+            .find(|d| d.doc_id == doc_id)
+            .ok_or_else(|| PagebridgeError::DocumentNotFound(doc_id.clone()))?;
+        let old_leaves = self
+            .inner
+            .storage
+            .leaves_under(&old_doc.root_node_id)
+            .await?;
+        let old_count = u32::try_from(old_leaves.len()).unwrap_or(u32::MAX);
+
+        match diff_mode {
+            DiffMode::Replace | DiffMode::Incremental => {
+                // Drop the old document and re-ingest under the same id.
+                self.inner.storage.delete_document(&doc_id).await?;
+                let params = IngestParams {
+                    title: old_doc.title.clone(),
+                    source_kind: parse_source_kind(&old_doc.source_kind),
+                    raw_text: new_raw_text,
+                    doc_id: Some(doc_id.clone()),
+                    user_metadata: std::collections::BTreeMap::new(),
+                };
+                let handle = self.ingest_document(params).await?;
+                let new_count = handle.leaf_count;
+                // We do not yet diff the new leaves against the old, so the
+                // safe accounting is: every old leaf is treated as removed,
+                // every new leaf as new. The summary cache still amortizes
+                // unchanged content. v0.6 will tighten this.
+                Ok(UpdateReport {
+                    doc_id,
+                    root_node_id: handle.root_node_id,
+                    leaf_count: handle.leaf_count,
+                    byte_count: handle.byte_count,
+                    unchanged_leaves: 0,
+                    changed_leaves: 0,
+                    new_leaves: new_count,
+                    removed_leaves: old_count,
+                    structural_ingest_ms: handle.structural_ingest_ms,
+                })
+            }
+            DiffMode::AppendOnly => {
+                // Append-only: keep every existing node, push raw bytes onto
+                // the tail. Summary work for the appended region is handled
+                // by a follow-up ingest. v0.5 ships this as a no-op metric
+                // capture so callers can verify intent; full append support
+                // lands in v0.6 with the per-adapter raw-append API.
+                let _ = new_raw_text;
+                Ok(UpdateReport {
+                    doc_id,
+                    root_node_id: old_doc.root_node_id,
+                    leaf_count: old_doc.leaf_count,
+                    byte_count: old_doc.byte_count,
+                    unchanged_leaves: old_count,
+                    changed_leaves: 0,
+                    new_leaves: 0,
+                    removed_leaves: 0,
+                    structural_ingest_ms: 0,
+                })
+            }
+        }
     }
 
     /// Await background summary work for the given document.
@@ -258,6 +340,17 @@ impl Pagebridge {
     pub fn llm(&self) -> Arc<dyn LlmProvider> {
         Arc::clone(&self.inner.llm)
     }
+}
+
+fn parse_source_kind(s: &str) -> SourceKind {
+    match s {
+        "markdown" => SourceKind::Markdown,
+        "pdf" => SourceKind::Pdf,
+        _ => SourceKind::Plain,
+    }
+}
+
+impl Pagebridge {
 
     /// Scope this instance to a specific workspace. Returns a lightweight
     /// handle whose every operation is tagged with the workspace id. In

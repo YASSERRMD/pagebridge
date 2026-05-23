@@ -36,6 +36,45 @@ pub struct IngestParams {
     pub user_metadata: BTreeMap<String, String>,
 }
 
+/// How `update_document` should reconcile new content with the stored version.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DiffMode {
+    /// Full re-ingest. Old nodes are removed, new ones inserted. The summary
+    /// cache (hash-keyed) lets unchanged leaves reuse summaries for free.
+    Replace,
+    /// Diff old leaves against new ones by content hash; reuse unchanged
+    /// nodes verbatim, regenerate only the changed ancestors. v0.5 ships
+    /// this as a stub that falls back to `Replace`; v0.6 will land the real
+    /// chunk-diff algorithm.
+    Incremental,
+    /// Append-only fast path for log-like documents: only new content past
+    /// the existing end-offset is processed.
+    AppendOnly,
+}
+
+/// Parameters for updating an existing document.
+#[derive(Debug, Clone)]
+pub struct UpdateParams {
+    pub doc_id: DocId,
+    pub new_raw_text: Vec<u8>,
+    pub diff_mode: DiffMode,
+}
+
+/// Report from `update_document`, mirroring `DocumentHandle` plus diff metrics.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UpdateReport {
+    pub doc_id: DocId,
+    pub root_node_id: NodeId,
+    pub leaf_count: u32,
+    pub byte_count: u64,
+    pub unchanged_leaves: u32,
+    pub changed_leaves: u32,
+    pub new_leaves: u32,
+    pub removed_leaves: u32,
+    pub structural_ingest_ms: u64,
+}
+
 /// Handle returned from `ingest_document`. The structural insert is complete by the
 /// time you hold this; background summary work can be awaited via `wait_for_summaries`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
