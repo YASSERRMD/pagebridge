@@ -8,12 +8,12 @@
 pub use pagebridge_core::version;
 pub use pagebridge_core::{
     AdapterStats, Answer, AnswerChunk, ChatMessage, ChatRole, Citation, CompletionRequest,
-    CompletionResponse, CompletionStream, DocId, DocumentEntry, DocumentHandle, FinishReason,
-    IngestParams, LlmConfig, LlmProvider, Navigation, NavigationConfig, NodeId, NodeLevel,
-    NodeRecord, NodeSummary, Pagebridge, PagebridgeError, PagebridgeOptions, PagebridgeStats,
-    PromptContext, PromptLibrary, QueryTrace, Result, SearchHit, SourceKind, StorageAdapter,
-    StreamChunk, SummaryCacheEntry, TraceStep, TraceStorageMode, VisionImage, WorkspaceHandle,
-    WorkspaceId,
+    CompletionResponse, CompletionStream, DiffMode, DocId, DocumentEntry, DocumentHandle,
+    FinishReason, IngestParams, LlmConfig, LlmProvider, Navigation, NavigationConfig, NodeId,
+    NodeLevel, NodeRecord, NodeSummary, Pagebridge, PagebridgeError, PagebridgeOptions,
+    PagebridgeStats, PromptContext, PromptLibrary, QueryTrace, Result, SearchHit, SourceKind,
+    StorageAdapter, StreamChunk, SummaryCacheEntry, TraceStep, TraceStorageMode, UpdateParams,
+    UpdateReport, VisionImage, WorkspaceHandle, WorkspaceId,
 };
 
 #[cfg(feature = "embedded")]
