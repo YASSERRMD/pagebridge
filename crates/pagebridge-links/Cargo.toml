@@ -1,0 +1,23 @@
+[package]
+name = "pagebridge-links"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Cross-document soft graph (link detection and resolution) for pagebridge"
+
+[dependencies]
+pagebridge-core.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+parking_lot.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true
