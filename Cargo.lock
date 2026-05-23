@@ -3164,6 +3164,7 @@ dependencies = [
  "pagebridge-admin",
  "pagebridge-auth",
  "pagebridge-core",
+ "pagebridge-links",
  "pagebridge-llm-anthropic",
  "pagebridge-llm-llamacpp",
  "pagebridge-llm-ollama",
@@ -3367,6 +3368,19 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-links"
+version = "0.1.0"
+dependencies = [
+ "pagebridge-core",
+ "parking_lot",
+ "regex",
+ "serde",
+ "serde_json",
  "tokio",
  "tracing",
 ]
