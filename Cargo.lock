@@ -3409,6 +3409,7 @@ dependencies = [
  "pagebridge-audit",
  "pagebridge-auth",
  "pagebridge-core",
+ "pagebridge-receipt",
  "serde",
  "serde_json",
  "tokio",

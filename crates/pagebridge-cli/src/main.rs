@@ -28,6 +28,7 @@
 
 mod audit;
 mod config;
+mod receipt_verify;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -171,6 +172,16 @@ enum Cmd {
     /// Tamper-evident audit log operations.
     #[command(subcommand)]
     Audit(AuditCmd),
+    /// Verify a signed AnswerReceipt JSON file offline.
+    VerifyReceipt {
+        receipt: PathBuf,
+        /// Path to the public key (raw 32 bytes).
+        #[arg(long)]
+        key: PathBuf,
+        /// Expected key id (must match the receipt).
+        #[arg(long)]
+        key_id: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -535,6 +546,11 @@ async fn main() -> Result<()> {
             }
         }
         Cmd::Audit(action) => audit::run(action, cli.json).await?,
+        Cmd::VerifyReceipt {
+            receipt,
+            key,
+            key_id,
+        } => receipt_verify::run(&receipt, &key, &key_id, cli.json).await?,
     }
     Ok(())
 }
