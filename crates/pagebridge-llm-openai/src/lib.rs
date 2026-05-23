@@ -64,6 +64,56 @@ impl OpenAiCompatibleProvider {
         Self::custom("http://localhost:1234", None, model)
     }
 
+    /// Connect to Groq (OpenAI-compatible) with the given API key.
+    pub fn groq(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::custom("https://api.groq.com/openai", Some(api_key.into()), model)
+    }
+
+    /// Connect to Cerebras (OpenAI-compatible) with the given API key.
+    pub fn cerebras(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::custom("https://api.cerebras.ai", Some(api_key.into()), model)
+    }
+
+    /// Connect to Fireworks AI (OpenAI-compatible) with the given API key.
+    pub fn fireworks(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::custom("https://api.fireworks.ai/inference", Some(api_key.into()), model)
+    }
+
+    /// Connect to Together AI (OpenAI-compatible) with the given API key.
+    pub fn together(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::custom("https://api.together.xyz", Some(api_key.into()), model)
+    }
+
+    /// Connect to Mistral (OpenAI-compatible) with the given API key.
+    pub fn mistral(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::custom("https://api.mistral.ai", Some(api_key.into()), model)
+    }
+
+    /// Connect to a Hugging Face TGI server.
+    pub fn hf_tgi(base_url: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::custom(base_url, None, model)
+    }
+
+    /// Connect to Azure OpenAI. Azure URLs typically look like
+    /// `https://<resource>.openai.azure.com/openai/deployments/<deployment>`.
+    pub fn azure_openai(
+        resource_url: impl Into<String>,
+        api_key: impl Into<String>,
+        deployment: impl Into<String>,
+    ) -> Self {
+        Self::custom(resource_url, Some(api_key.into()), deployment)
+    }
+
+    /// Connect to Replicate (OpenAI-compatible adapter endpoint).
+    pub fn replicate(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::custom("https://openai-proxy.replicate.com", Some(api_key.into()), model)
+    }
+
+    /// Connect to a Modal deployment exposing an OpenAI-compatible /v1 endpoint.
+    pub fn modal(base_url: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::custom(base_url, None, model)
+    }
+
     /// Construct with full configuration.
     pub fn with_config(
         base_url: impl Into<String>,

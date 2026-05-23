@@ -1,0 +1,93 @@
+[
+  {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "input_per_1m_micro_usd": 2500000,
+    "output_per_1m_micro_usd": 10000000,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "input_per_1m_micro_usd": 150000,
+    "output_per_1m_micro_usd": 600000,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "anthropic",
+    "model": "claude-opus-4",
+    "input_per_1m_micro_usd": 15000000,
+    "output_per_1m_micro_usd": 75000000,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4",
+    "input_per_1m_micro_usd": 3000000,
+    "output_per_1m_micro_usd": 15000000,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "input_per_1m_micro_usd": 800000,
+    "output_per_1m_micro_usd": 4000000,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "google",
+    "model": "gemini-2.0-flash",
+    "input_per_1m_micro_usd": 100000,
+    "output_per_1m_micro_usd": 400000,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "google",
+    "model": "gemini-2.0-pro",
+    "input_per_1m_micro_usd": 1250000,
+    "output_per_1m_micro_usd": 5000000,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "groq",
+    "model": "llama-3.3-70b",
+    "input_per_1m_micro_usd": 590000,
+    "output_per_1m_micro_usd": 790000,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "mistral",
+    "model": "mistral-large",
+    "input_per_1m_micro_usd": 2000000,
+    "output_per_1m_micro_usd": 6000000,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "cohere",
+    "model": "command-r-plus",
+    "input_per_1m_micro_usd": 2500000,
+    "output_per_1m_micro_usd": 10000000,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "bedrock",
+    "model": "anthropic.claude-3-5-sonnet",
+    "input_per_1m_micro_usd": 3000000,
+    "output_per_1m_micro_usd": 15000000,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "ollama",
+    "model": "qwen2.5",
+    "input_per_1m_micro_usd": 0,
+    "output_per_1m_micro_usd": 0,
+    "effective_date": "2026-01-01"
+  },
+  {
+    "provider": "llamacpp",
+    "model": "local",
+    "input_per_1m_micro_usd": 0,
+    "output_per_1m_micro_usd": 0,
+    "effective_date": "2026-01-01"
+  }
+]

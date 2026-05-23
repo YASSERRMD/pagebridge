@@ -25,6 +25,13 @@ members = [
     "crates/pagebridge-receipt",
     "crates/pagebridge-deterministic",
     "crates/pagebridge-timetravel",
+    "crates/pagebridge-reranker",
+    "crates/pagebridge-llm-routing",
+    "crates/pagebridge-llm-cost",
+    "crates/pagebridge-llm-gemini",
+    "crates/pagebridge-llm-bedrock",
+    "crates/pagebridge-llm-cohere",
+    "crates/pagebridge-llm-mlx",
     "crates/pagebridge",
     "crates/pagebridge-py",
     "crates/pagebridge-cli",
@@ -147,6 +154,13 @@ pagebridge-audit = { path = "crates/pagebridge-audit", version = "1.2.0" }
 pagebridge-receipt = { path = "crates/pagebridge-receipt", version = "1.2.0" }
 pagebridge-deterministic = { path = "crates/pagebridge-deterministic", version = "1.2.0" }
 pagebridge-timetravel = { path = "crates/pagebridge-timetravel", version = "1.2.0" }
+pagebridge-reranker = { path = "crates/pagebridge-reranker", version = "1.2.0" }
+pagebridge-llm-routing = { path = "crates/pagebridge-llm-routing", version = "1.2.0" }
+pagebridge-llm-cost = { path = "crates/pagebridge-llm-cost", version = "1.2.0" }
+pagebridge-llm-gemini = { path = "crates/pagebridge-llm-gemini", version = "1.2.0" }
+pagebridge-llm-bedrock = { path = "crates/pagebridge-llm-bedrock", version = "1.2.0" }
+pagebridge-llm-cohere = { path = "crates/pagebridge-llm-cohere", version = "1.2.0" }
+pagebridge-llm-mlx = { path = "crates/pagebridge-llm-mlx", version = "1.2.0" }
 pagebridge = { path = "crates/pagebridge", version = "1.2.0" }
 
 [workspace.lints.clippy]

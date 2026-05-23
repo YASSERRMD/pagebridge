@@ -1,0 +1,30 @@
+[package]
+name = "pagebridge-reranker"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Reranker trait and provider implementations for pagebridge"
+
+[dependencies]
+pagebridge-core.workspace = true
+async-trait.workspace = true
+tokio = { workspace = true, features = ["macros"] }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+reqwest = { workspace = true, optional = true }
+
+[features]
+default = []
+voyage = ["dep:reqwest"]
+cohere = ["dep:reqwest"]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true
