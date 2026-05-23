@@ -15,6 +15,9 @@ pub use pagebridge_core::{
     StorageAdapter, StreamChunk, SummaryCacheEntry, TraceStep, TraceStorageMode, UpdateParams,
     UpdateReport, VisionImage, WorkspaceHandle, WorkspaceId,
 };
+pub use pagebridge_core::{
+    InvalidationEvent, InvalidationKind, ReplicationConfig, ReplicationRole,
+};
 
 #[cfg(feature = "embedded")]
 pub use pagebridge_adapter_embedded::EmbeddedAdapter;
