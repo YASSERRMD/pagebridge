@@ -20,6 +20,8 @@ pub use pagebridge_adapter_embedded::EmbeddedAdapter;
 pub use pagebridge_adapter_jsonfile::JsonFileAdapter;
 #[cfg(feature = "mongodb")]
 pub use pagebridge_adapter_mongodb::MongoAdapter;
+#[cfg(feature = "mssql")]
+pub use pagebridge_adapter_mssql::MSSqlAdapter;
 #[cfg(feature = "mysql")]
 pub use pagebridge_adapter_mysql::MySqlAdapter;
 #[cfg(feature = "postgres")]
