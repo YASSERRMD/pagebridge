@@ -4178,6 +4178,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-wasm"
+version = "1.8.0"
+dependencies = [
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "parking"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
