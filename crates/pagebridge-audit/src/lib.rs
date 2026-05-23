@@ -29,8 +29,12 @@
 
 pub mod error;
 pub mod event;
+pub mod sign;
 
 pub use error::{AuditError, Result};
 pub use event::{
     AuditAction, AuditEvent, AuditOutcome, AuditResource, PolicyDecision, Principal,
+};
+pub use sign::{
+    canonical_event_hash, seal_event, verify_event, SignatureVerifier, SigningSecret,
 };
