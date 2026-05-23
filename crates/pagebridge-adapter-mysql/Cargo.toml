@@ -1,0 +1,27 @@
+[package]
+name = "pagebridge-adapter-mysql"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "MySQL/MariaDB storage adapter for pagebridge"
+
+[dependencies]
+pagebridge-core.workspace = true
+async-trait.workspace = true
+tokio.workspace = true
+mysql_async.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+futures.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+testcontainers.workspace = true
+testcontainers-modules = { workspace = true }
+
+[lints]
+workspace = true

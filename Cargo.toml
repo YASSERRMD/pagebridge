@@ -6,6 +6,7 @@ members = [
     "crates/pagebridge-adapter-mongodb",
     "crates/pagebridge-adapter-embedded",
     "crates/pagebridge-adapter-jsonfile",
+    "crates/pagebridge-adapter-mysql",
     "crates/pagebridge-llm-ollama",
     "crates/pagebridge-llm-openai",
     "crates/pagebridge-llm-anthropic",
@@ -74,6 +75,7 @@ mongodb = "3.1"
 redb = "2.2"
 tantivy = "0.22"
 memmap2 = "0.9"
+mysql_async = { version = "0.34", default-features = false, features = ["minimal-rust", "rustls-tls"] }
 
 # PDF
 pdf-extract = "0.7"
@@ -84,7 +86,7 @@ tempfile = "3.10"
 proptest = "1.5"
 rand = "0.8"
 testcontainers = "0.23"
-testcontainers-modules = { version = "0.11", features = ["postgres", "mongo"] }
+testcontainers-modules = { version = "0.11", features = ["postgres", "mongo", "mariadb"] }
 wiremock = "0.6"
 
 # Workspace internal
@@ -94,6 +96,7 @@ pagebridge-adapter-sqlite = { path = "crates/pagebridge-adapter-sqlite", version
 pagebridge-adapter-mongodb = { path = "crates/pagebridge-adapter-mongodb", version = "0.1.0" }
 pagebridge-adapter-embedded = { path = "crates/pagebridge-adapter-embedded", version = "0.1.0" }
 pagebridge-adapter-jsonfile = { path = "crates/pagebridge-adapter-jsonfile", version = "0.1.0" }
+pagebridge-adapter-mysql = { path = "crates/pagebridge-adapter-mysql", version = "0.1.0" }
 pagebridge-llm-ollama = { path = "crates/pagebridge-llm-ollama", version = "0.1.0" }
 pagebridge-llm-openai = { path = "crates/pagebridge-llm-openai", version = "0.1.0" }
 pagebridge-llm-anthropic = { path = "crates/pagebridge-llm-anthropic", version = "0.1.0" }
