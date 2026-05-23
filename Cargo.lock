@@ -4009,6 +4009,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-sensitivity"
+version = "1.4.0"
+dependencies = [
+ "pagebridge-core",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-slo"
 version = "1.4.0"
 dependencies = [
