@@ -15,6 +15,7 @@ pagebridge-adapter-sqlite = { workspace = true, optional = true }
 pagebridge-adapter-mongodb = { workspace = true, optional = true }
 pagebridge-adapter-embedded = { workspace = true, optional = true }
 pagebridge-adapter-jsonfile = { workspace = true, optional = true }
+pagebridge-adapter-mysql = { workspace = true, optional = true }
 pagebridge-llm-ollama = { workspace = true, optional = true }
 pagebridge-llm-openai = { workspace = true, optional = true }
 pagebridge-llm-anthropic = { workspace = true, optional = true }
@@ -26,10 +27,11 @@ sqlite = ["dep:pagebridge-adapter-sqlite"]
 mongodb = ["dep:pagebridge-adapter-mongodb"]
 embedded = ["dep:pagebridge-adapter-embedded"]
 jsonfile = ["dep:pagebridge-adapter-jsonfile"]
+mysql = ["dep:pagebridge-adapter-mysql"]
 ollama = ["dep:pagebridge-llm-ollama"]
 openai = ["dep:pagebridge-llm-openai"]
 anthropic = ["dep:pagebridge-llm-anthropic"]
-all-adapters = ["postgres", "sqlite", "mongodb", "embedded", "jsonfile"]
+all-adapters = ["postgres", "sqlite", "mongodb", "embedded", "jsonfile", "mysql"]
 all-llms = ["ollama", "openai", "anthropic"]
 full = ["all-adapters", "all-llms"]
 

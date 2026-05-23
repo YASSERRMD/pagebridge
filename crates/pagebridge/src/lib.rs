@@ -20,6 +20,8 @@ pub use pagebridge_adapter_embedded::EmbeddedAdapter;
 pub use pagebridge_adapter_jsonfile::JsonFileAdapter;
 #[cfg(feature = "mongodb")]
 pub use pagebridge_adapter_mongodb::MongoAdapter;
+#[cfg(feature = "mysql")]
+pub use pagebridge_adapter_mysql::MySqlAdapter;
 #[cfg(feature = "postgres")]
 pub use pagebridge_adapter_postgres::PostgresAdapter;
 #[cfg(feature = "sqlite")]
@@ -80,6 +82,14 @@ pub async fn mongo_with_anthropic(
 ) -> Result<Pagebridge> {
     let storage = Arc::new(MongoAdapter::connect(url, db).await?);
     let llm = Arc::new(AnthropicProvider::new(api_key, model));
+    Pagebridge::new(storage, llm).await
+}
+
+#[cfg(all(feature = "mysql", feature = "openai"))]
+/// Quickstart: MySQL/MariaDB + OpenAI-compatible endpoint.
+pub async fn mysql_with_openai(url: &str, api_key: &str, model: &str) -> Result<Pagebridge> {
+    let storage = Arc::new(MySqlAdapter::connect(url).await?);
+    let llm = Arc::new(OpenAiCompatibleProvider::openai(api_key, model));
     Pagebridge::new(storage, llm).await
 }
 
