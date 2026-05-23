@@ -24,13 +24,14 @@ pub use adapter::StorageAdapter;
 pub use error::{PagebridgeError, Result};
 pub use id::{DocId, NodeId};
 pub use llm::{
-    ChatMessage, ChatRole, CompletionRequest, CompletionResponse, FinishReason, LlmConfig,
-    LlmProvider,
+    ChatMessage, ChatRole, CompletionRequest, CompletionResponse, CompletionStream, FinishReason,
+    LlmConfig, LlmProvider, StreamChunk,
 };
 pub use prompts::{PromptContext, PromptLibrary};
 pub use record::{NodeLevel, NodeRecord, NodeSummary};
 pub use types::{
-    AdapterStats, Answer, Citation, DocumentEntry, DocumentHandle, IngestParams, Navigation,
+    AdapterStats, Answer, AnswerChunk, Citation, DocumentEntry, DocumentHandle, IngestParams,
+    Navigation,
     NavigationConfig, PagebridgeStats, QueryTrace, SearchHit, SourceKind, SummaryCacheEntry,
     TraceStep, TraceStorageMode,
 };

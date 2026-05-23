@@ -89,6 +89,22 @@ pub struct Citation {
     pub excerpt: String,
 }
 
+/// A chunk produced by [`crate::Pagebridge::ask_stream`]. Concatenating every
+/// `Token` event yields the same text the non-streaming `ask` would produce.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum AnswerChunk {
+    /// A piece of generated text.
+    Token { text: String },
+    /// A resolved citation emitted as the synthesizer references a leaf.
+    Citation { citation: Citation },
+    /// Terminal chunk with the full query trace and consolidated citation list.
+    Done {
+        trace: QueryTrace,
+        citations: Vec<Citation>,
+    },
+}
+
 /// A single step in a query trace. See [`QueryTrace`].
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
