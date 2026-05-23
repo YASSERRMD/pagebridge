@@ -3583,7 +3583,13 @@ dependencies = [
 name = "pagebridge-llm-routing"
 version = "1.2.0"
 dependencies = [
+ "async-trait",
  "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
