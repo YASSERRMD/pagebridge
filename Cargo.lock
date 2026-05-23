@@ -3767,6 +3767,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-hotreload"
+version = "1.5.0"
+dependencies = [
+ "arc-swap",
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-injection"
 version = "1.5.0"
 dependencies = [
