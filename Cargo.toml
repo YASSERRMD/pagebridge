@@ -28,7 +28,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 rust-version = "1.89"
 license = "Apache-2.0"
@@ -118,28 +118,28 @@ testcontainers-modules = { version = "0.11", features = ["postgres", "mongo", "m
 wiremock = "0.6"
 
 # Workspace internal
-pagebridge-core = { path = "crates/pagebridge-core", version = "0.1.0" }
-pagebridge-adapter-postgres = { path = "crates/pagebridge-adapter-postgres", version = "0.1.0" }
-pagebridge-adapter-sqlite = { path = "crates/pagebridge-adapter-sqlite", version = "0.1.0" }
-pagebridge-adapter-mongodb = { path = "crates/pagebridge-adapter-mongodb", version = "0.1.0" }
-pagebridge-adapter-embedded = { path = "crates/pagebridge-adapter-embedded", version = "0.1.0" }
-pagebridge-adapter-jsonfile = { path = "crates/pagebridge-adapter-jsonfile", version = "0.1.0" }
-pagebridge-adapter-mysql = { path = "crates/pagebridge-adapter-mysql", version = "0.1.0" }
-pagebridge-adapter-mssql = { path = "crates/pagebridge-adapter-mssql", version = "0.1.0" }
-pagebridge-adapter-oracle = { path = "crates/pagebridge-adapter-oracle", version = "0.1.0" }
-pagebridge-llm-ollama = { path = "crates/pagebridge-llm-ollama", version = "0.1.0" }
-pagebridge-llm-openai = { path = "crates/pagebridge-llm-openai", version = "0.1.0" }
-pagebridge-llm-anthropic = { path = "crates/pagebridge-llm-anthropic", version = "0.1.0" }
-pagebridge-llm-llamacpp = { path = "crates/pagebridge-llm-llamacpp", version = "0.1.0" }
-pagebridge-admin = { path = "crates/pagebridge-admin", version = "0.1.0" }
-pagebridge-mcp = { path = "crates/pagebridge-mcp", version = "0.1.0" }
-pagebridge-obs = { path = "crates/pagebridge-obs", version = "0.1.0" }
-pagebridge-auth = { path = "crates/pagebridge-auth", version = "0.1.0" }
-pagebridge-vision = { path = "crates/pagebridge-vision", version = "0.1.0" }
-pagebridge-links = { path = "crates/pagebridge-links", version = "0.1.0" }
-pagebridge-eval = { path = "crates/pagebridge-eval", version = "0.1.0" }
-pagebridge-plugin-abi = { path = "crates/pagebridge-plugin-abi", version = "0.1.0" }
-pagebridge = { path = "crates/pagebridge", version = "0.1.0" }
+pagebridge-core = { path = "crates/pagebridge-core", version = "1.0.0" }
+pagebridge-adapter-postgres = { path = "crates/pagebridge-adapter-postgres", version = "1.0.0" }
+pagebridge-adapter-sqlite = { path = "crates/pagebridge-adapter-sqlite", version = "1.0.0" }
+pagebridge-adapter-mongodb = { path = "crates/pagebridge-adapter-mongodb", version = "1.0.0" }
+pagebridge-adapter-embedded = { path = "crates/pagebridge-adapter-embedded", version = "1.0.0" }
+pagebridge-adapter-jsonfile = { path = "crates/pagebridge-adapter-jsonfile", version = "1.0.0" }
+pagebridge-adapter-mysql = { path = "crates/pagebridge-adapter-mysql", version = "1.0.0" }
+pagebridge-adapter-mssql = { path = "crates/pagebridge-adapter-mssql", version = "1.0.0" }
+pagebridge-adapter-oracle = { path = "crates/pagebridge-adapter-oracle", version = "1.0.0" }
+pagebridge-llm-ollama = { path = "crates/pagebridge-llm-ollama", version = "1.0.0" }
+pagebridge-llm-openai = { path = "crates/pagebridge-llm-openai", version = "1.0.0" }
+pagebridge-llm-anthropic = { path = "crates/pagebridge-llm-anthropic", version = "1.0.0" }
+pagebridge-llm-llamacpp = { path = "crates/pagebridge-llm-llamacpp", version = "1.0.0" }
+pagebridge-admin = { path = "crates/pagebridge-admin", version = "1.0.0" }
+pagebridge-mcp = { path = "crates/pagebridge-mcp", version = "1.0.0" }
+pagebridge-obs = { path = "crates/pagebridge-obs", version = "1.0.0" }
+pagebridge-auth = { path = "crates/pagebridge-auth", version = "1.0.0" }
+pagebridge-vision = { path = "crates/pagebridge-vision", version = "1.0.0" }
+pagebridge-links = { path = "crates/pagebridge-links", version = "1.0.0" }
+pagebridge-eval = { path = "crates/pagebridge-eval", version = "1.0.0" }
+pagebridge-plugin-abi = { path = "crates/pagebridge-plugin-abi", version = "1.0.0" }
+pagebridge = { path = "crates/pagebridge", version = "1.0.0" }
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
