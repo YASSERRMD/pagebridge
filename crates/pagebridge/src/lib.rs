@@ -12,7 +12,7 @@ pub use pagebridge_core::{
     IngestParams, LlmConfig, LlmProvider, Navigation, NavigationConfig, NodeId, NodeLevel,
     NodeRecord, NodeSummary, Pagebridge, PagebridgeError, PagebridgeOptions, PagebridgeStats,
     PromptContext, PromptLibrary, QueryTrace, Result, SearchHit, SourceKind, StorageAdapter,
-    StreamChunk, SummaryCacheEntry, TraceStep, TraceStorageMode,
+    StreamChunk, SummaryCacheEntry, TraceStep, TraceStorageMode, WorkspaceHandle, WorkspaceId,
 };
 
 #[cfg(feature = "embedded")]
