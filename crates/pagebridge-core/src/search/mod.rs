@@ -32,6 +32,8 @@
 pub mod candidates;
 pub mod navigate;
 pub mod synthesize;
+pub mod synthesize_stream;
 
 pub use navigate::{navigate, NavigationOutcome};
 pub use synthesize::synthesize_answer;
+pub use synthesize_stream::{collect_stream, synthesize_answer_stream};
