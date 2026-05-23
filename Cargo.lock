@@ -3680,6 +3680,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-budget"
+version = "1.6.0"
+dependencies = [
+ "pagebridge-core",
+ "pagebridge-llm-cost",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-build"
 version = "1.6.0"
 dependencies = [
