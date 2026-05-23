@@ -24,6 +24,7 @@ pagebridge-llm-anthropic = { workspace = true, optional = true }
 pagebridge-llm-llamacpp = { workspace = true, optional = true }
 pagebridge-admin = { workspace = true, optional = true }
 pagebridge-mcp = { workspace = true, optional = true }
+pagebridge-obs = { workspace = true, optional = true }
 
 [features]
 default = ["sqlite", "embedded", "jsonfile", "ollama", "openai"]
@@ -43,9 +44,10 @@ llamacpp = ["dep:pagebridge-llm-llamacpp"]
 llamacpp-driver = ["llamacpp", "pagebridge-llm-llamacpp/llamacpp-driver"]
 admin = ["dep:pagebridge-admin"]
 mcp = ["dep:pagebridge-mcp"]
+obs = ["dep:pagebridge-obs"]
 all-adapters = ["postgres", "sqlite", "mongodb", "embedded", "jsonfile", "mysql", "mssql", "oracle"]
 all-llms = ["ollama", "openai", "anthropic", "llamacpp"]
-full = ["all-adapters", "all-llms", "admin", "mcp"]
+full = ["all-adapters", "all-llms", "admin", "mcp", "obs"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

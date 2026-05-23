@@ -36,6 +36,8 @@ pub use pagebridge_adapter_sqlite::SqliteAdapter;
 pub use pagebridge_admin as admin;
 #[cfg(feature = "mcp")]
 pub use pagebridge_mcp as mcp;
+#[cfg(feature = "obs")]
+pub use pagebridge_obs as obs;
 #[cfg(feature = "anthropic")]
 pub use pagebridge_llm_anthropic::AnthropicProvider;
 #[cfg(feature = "llamacpp")]
