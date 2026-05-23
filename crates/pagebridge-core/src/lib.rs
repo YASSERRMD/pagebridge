@@ -34,10 +34,9 @@ pub use workspace::WorkspaceId;
 pub use workspace_handle::WorkspaceHandle;
 pub use record::{NodeLevel, NodeRecord, NodeSummary};
 pub use types::{
-    AdapterStats, Answer, AnswerChunk, Citation, DocumentEntry, DocumentHandle, IngestParams,
-    Navigation,
-    NavigationConfig, PagebridgeStats, QueryTrace, SearchHit, SourceKind, SummaryCacheEntry,
-    TraceStep, TraceStorageMode,
+    AdapterStats, Answer, AnswerChunk, Citation, DiffMode, DocumentEntry, DocumentHandle,
+    IngestParams, Navigation, NavigationConfig, PagebridgeStats, QueryTrace, SearchHit, SourceKind,
+    SummaryCacheEntry, TraceStep, TraceStorageMode, UpdateParams, UpdateReport,
 };
 
 /// Crate version string, used by the CLI and by trace metadata.
