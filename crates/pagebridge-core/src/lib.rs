@@ -17,6 +17,8 @@ pub mod record;
 pub mod search;
 pub mod trace;
 pub mod types;
+pub mod workspace;
+pub mod workspace_handle;
 
 pub use facade::{Pagebridge, PagebridgeOptions};
 
@@ -28,6 +30,8 @@ pub use llm::{
     LlmConfig, LlmProvider, StreamChunk,
 };
 pub use prompts::{PromptContext, PromptLibrary};
+pub use workspace::WorkspaceId;
+pub use workspace_handle::WorkspaceHandle;
 pub use record::{NodeLevel, NodeRecord, NodeSummary};
 pub use types::{
     AdapterStats, Answer, AnswerChunk, Citation, DocumentEntry, DocumentHandle, IngestParams,
