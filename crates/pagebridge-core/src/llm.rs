@@ -3,7 +3,10 @@
 //! Pagebridge is intentionally LLM-agnostic. Every LLM call goes through this
 //! trait. Concrete providers live in their own crates (Ollama, OpenAI, Anthropic).
 
+use std::pin::Pin;
+
 use async_trait::async_trait;
+use futures::Stream;
 
 use crate::error::Result;
 
@@ -87,6 +90,24 @@ pub struct CompletionResponse {
     pub finish_reason: FinishReason,
 }
 
+/// A chunk emitted by a streaming completion.
+#[derive(Debug, Clone)]
+pub enum StreamChunk {
+    /// A piece of generated text. Concatenating every `Token` event yields the
+    /// same string a non-streaming `complete()` call would have returned.
+    Token(String),
+    /// End-of-stream marker with usage counts.
+    Finished {
+        input_tokens: u32,
+        output_tokens: u32,
+        finish_reason: FinishReason,
+    },
+}
+
+/// Boxed asynchronous stream of completion chunks.
+pub type CompletionStream =
+    Pin<Box<dyn Stream<Item = Result<StreamChunk>> + Send + 'static>>;
+
 /// Provider-side knobs (timeouts, retries) shared across all providers.
 #[derive(Debug, Clone, Copy)]
 pub struct LlmConfig {
@@ -130,7 +151,24 @@ pub trait LlmProvider: Send + Sync + 'static {
         schema: &serde_json::Value,
     ) -> Result<serde_json::Value>;
 
-    /// Does this provider stream tokens? Default false.
+    /// Stream tokens from a completion. Default implementation falls back to
+    /// `complete()` and emits the whole response as one token followed by a
+    /// `Finished` chunk. Providers that natively stream override this method.
+    async fn complete_stream(&self, req: CompletionRequest) -> Result<CompletionStream> {
+        let resp = self.complete(req).await?;
+        let s = futures::stream::iter(vec![
+            Ok(StreamChunk::Token(resp.text)),
+            Ok(StreamChunk::Finished {
+                input_tokens: resp.input_tokens,
+                output_tokens: resp.output_tokens,
+                finish_reason: resp.finish_reason,
+            }),
+        ]);
+        Ok(Box::pin(s))
+    }
+
+    /// Does this provider stream tokens natively? Default false. Streaming via
+    /// the default fallback still works regardless.
     fn supports_streaming(&self) -> bool {
         false
     }
@@ -152,8 +190,8 @@ pub trait LlmProvider: Send + Sync + 'static {
 /// the last user message.
 pub mod echo {
     use super::{
-        ChatMessage, ChatRole, CompletionRequest, CompletionResponse, FinishReason, LlmProvider,
-        Result,
+        ChatMessage, ChatRole, CompletionRequest, CompletionResponse, CompletionStream,
+        FinishReason, LlmProvider, Result, StreamChunk,
     };
     use async_trait::async_trait;
     use parking_lot::Mutex;
@@ -165,6 +203,7 @@ pub mod echo {
     pub struct EchoLlmProvider {
         canned: Mutex<VecDeque<CompletionResponse>>,
         canned_json: Mutex<VecDeque<serde_json::Value>>,
+        canned_streams: Mutex<VecDeque<Vec<StreamChunk>>>,
     }
 
     impl EchoLlmProvider {
@@ -186,6 +225,24 @@ pub mod echo {
         /// Queue a canned JSON response.
         pub fn push_json(&self, value: serde_json::Value) {
             self.canned_json.lock().push_back(value);
+        }
+
+        /// Queue a canned scripted stream. The provider will emit each chunk
+        /// in order; the last chunk should be `StreamChunk::Finished`. If
+        /// omitted, the trailing `Finished` is appended automatically.
+        pub fn push_stream(&self, chunks: Vec<StreamChunk>) {
+            let mut chunks = chunks;
+            if !chunks
+                .iter()
+                .any(|c| matches!(c, StreamChunk::Finished { .. }))
+            {
+                chunks.push(StreamChunk::Finished {
+                    input_tokens: 1,
+                    output_tokens: 1,
+                    finish_reason: FinishReason::Stop,
+                });
+            }
+            self.canned_streams.lock().push_back(chunks);
         }
     }
 
@@ -228,6 +285,28 @@ pub mod echo {
                 return Ok(v);
             }
             Ok(serde_json::json!({}))
+        }
+
+        async fn complete_stream(&self, req: CompletionRequest) -> Result<CompletionStream> {
+            let scripted = self.canned_streams.lock().pop_front();
+            if let Some(chunks) = scripted {
+                let mapped = chunks.into_iter().map(Ok);
+                return Ok(Box::pin(futures::stream::iter(mapped)));
+            }
+            // No scripted stream; fall back to a single-chunk replay of complete().
+            let resp = self.complete(req).await?;
+            Ok(Box::pin(futures::stream::iter(vec![
+                Ok(StreamChunk::Token(resp.text)),
+                Ok(StreamChunk::Finished {
+                    input_tokens: resp.input_tokens,
+                    output_tokens: resp.output_tokens,
+                    finish_reason: resp.finish_reason,
+                }),
+            ])))
+        }
+
+        fn supports_streaming(&self) -> bool {
+            true
         }
     }
 }
