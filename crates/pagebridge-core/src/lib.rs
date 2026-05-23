@@ -27,7 +27,7 @@ pub use error::{PagebridgeError, Result};
 pub use id::{DocId, NodeId};
 pub use llm::{
     ChatMessage, ChatRole, CompletionRequest, CompletionResponse, CompletionStream, FinishReason,
-    LlmConfig, LlmProvider, StreamChunk,
+    LlmConfig, LlmProvider, StreamChunk, VisionImage,
 };
 pub use prompts::{PromptContext, PromptLibrary};
 pub use workspace::WorkspaceId;
