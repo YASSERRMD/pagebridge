@@ -20,6 +20,7 @@ members = [
     "crates/pagebridge-vision",
     "crates/pagebridge-links",
     "crates/pagebridge-eval",
+    "crates/pagebridge-plugin-abi",
     "crates/pagebridge",
     "crates/pagebridge-py",
     "crates/pagebridge-cli",
@@ -137,6 +138,7 @@ pagebridge-auth = { path = "crates/pagebridge-auth", version = "0.1.0" }
 pagebridge-vision = { path = "crates/pagebridge-vision", version = "0.1.0" }
 pagebridge-links = { path = "crates/pagebridge-links", version = "0.1.0" }
 pagebridge-eval = { path = "crates/pagebridge-eval", version = "0.1.0" }
+pagebridge-plugin-abi = { path = "crates/pagebridge-plugin-abi", version = "0.1.0" }
 pagebridge = { path = "crates/pagebridge", version = "0.1.0" }
 
 [workspace.lints.clippy]
