@@ -4,6 +4,25 @@ All notable changes to pagebridge land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [SemVer](https://semver.org/).
 
+## [1.5.0] - 2026-05-23
+
+The "Multi-Tenant Production" release. Pagebridge can be safely
+shared across many tenants with per-tenant rate limits, fair queueing,
+and per-document sensitivity labels.
+
+### Added
+
+- New crate `pagebridge-sensitivity`: `SensitivityLabel` taxonomy
+  (Public/Internal/Confidential/Restricted/PII/PHI/Custom),
+  `AccessPolicy` with least-privilege defaults plus `with_tier` /
+  `with_phi` / `with_pii_categories` builders, `RegexDetector` for
+  ingest-time auto-classification of email/SSN/phone/credit-card.
+- New crate `pagebridge-tenant`: `TokenBucket` rate limiter,
+  `TenantLimits` bundle (requests + input/output tokens + max_inflight
+  + daily-USD cap), `Drr` deficit round-robin fair scheduler,
+  `TenantRegistry` with admit/release semantics and per-tenant stats
+  snapshots for Prometheus scraping.
+
 ## [1.4.0] - 2026-05-23
 
 The "Production-Grade Operations" release. Pagebridge gains SLO
