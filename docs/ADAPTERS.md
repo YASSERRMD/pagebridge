@@ -1,6 +1,6 @@
 # Storage adapters
 
-`pagebridge` ships with seven storage adapters across v0.1 and v0.2. They all
+`pagebridge` ships with eight storage adapters across v0.1 and v0.2. They all
 implement the same `StorageAdapter` trait, so swapping between them is a
 constructor change.
 
@@ -12,6 +12,7 @@ constructor change.
 | MySQL      | `pagebridge-adapter-mysql`         | LAMP-stack and MariaDB shops   | MATCH AGAINST natural language|
 | MongoDB    | `pagebridge-adapter-mongodb`       | Document-DB shops              | $text + textScore             |
 | SQL Server | `pagebridge-adapter-mssql`         | Enterprise / Windows shops     | Full-Text (LIKE fallback)     |
+| Oracle     | `pagebridge-adapter-oracle`        | Enterprise / government shops  | Oracle Text (LIKE fallback)   |
 | JSON file  | `pagebridge-adapter-jsonfile`      | Prototyping / migrations       | Substring fallback            |
 
 ## Embedded (redb + tantivy)
@@ -84,6 +85,46 @@ Operational notes:
 - Run with `mssql` Cargo feature: `cargo add pagebridge --features mssql`.
 - Microsoft container licensing requires `ACCEPT_EULA=Y`; the integration
   test is gated behind `MSSQL_TEST=1` to keep CI runs predictable.
+
+## Oracle
+
+The Oracle adapter is the first that requires native libraries on the build
+host. The underlying `oracle` Rust crate links against Oracle Instant Client
+(`libclntsh`). To keep the rest of the workspace buildable on hosts without
+Instant Client, the crate has two compile modes:
+
+- **Default (`pagebridge-adapter-oracle`)**: compiles to a stub that returns an
+  explicit "Oracle driver not enabled" error from every method. Useful for
+  reproducible CI on hosts without Oracle SDK.
+- **`oracle-driver` feature**: pulls in the real `oracle` crate. Requires
+  Oracle Instant Client present on the build host.
+
+Build the umbrella crate with Oracle support enabled:
+
+```bash
+cargo build -p pagebridge --features oracle-driver
+```
+
+Schema highlights:
+
+- `pagebridge_nodes` keys `node_id` as `VARCHAR2(512)`, with `CLOB` for
+  summaries and keyword JSON arrays, `RAW(32)` for source hashes.
+- `pagebridge_raw` stores chunked `BLOB` blocks (1 MB default).
+- `pagebridge_summary_cache` uses `RAW(32)` primary key + `BLOB` payload.
+- An Oracle Text `CONTEXT` index on `summary` is created best-effort during
+  `migrate`; pure-`LIKE` search is the v0.2 fallback when Oracle Text is not
+  installed.
+
+Connection pooling is hand-rolled (`parking_lot::Mutex<Vec<Connection>>`) and
+every driver call is dispatched onto `tokio::task::spawn_blocking`.
+
+Operational notes:
+
+- Install Oracle Instant Client and ensure `libclntsh` is on the dynamic
+  library search path (`LD_LIBRARY_PATH` on Linux, `DYLD_LIBRARY_PATH` on
+  macOS).
+- Oracle Text option is bundled with Standard Edition and above; if your
+  edition lacks it, the adapter still works through the `LIKE` fallback.
 
 ## MongoDB
 
