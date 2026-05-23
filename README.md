@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/YASSERRMD/pagebridge/actions/workflows/ci.yml"><img src="https://github.com/YASSERRMD/pagebridge/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="LICENSE-MIT"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-1B2A4A.svg" alt="License: MIT OR Apache-2.0" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-1B2A4A.svg" alt="License: Apache-2.0" /></a>
   <img src="https://img.shields.io/badge/rust-1.89%2B-C5A55A.svg" alt="Rust 1.89+" />
   <img src="https://img.shields.io/badge/python-3.9%2B-1B2A4A.svg" alt="Python 3.9+" />
   <img src="https://img.shields.io/badge/version-0.1.0-C5A55A.svg" alt="Version 0.1.0" />
@@ -396,10 +396,7 @@ pagebridge/
 
 ## License
 
-Dual licensed under your choice of:
-
-- [MIT](LICENSE-MIT)
-- [Apache-2.0](LICENSE-APACHE)
+Licensed under the [Apache License, Version 2.0](LICENSE).
 
 ---
 
