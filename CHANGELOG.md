@@ -4,6 +4,19 @@ All notable changes to pagebridge land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [SemVer](https://semver.org/).
 
+## [1.8.0] - 2026-05-23
+
+The "Explainability + Causal Analysis" release.
+
+### Added
+
+- New crate `pagebridge-causal`: CausalDag with topological explain()
+  walk; Counterfactual with diff_summary() across LLM / snapshot /
+  prompt-version / navigation-policy changes.
+- New crate `pagebridge-shadow`: ShadowConfig, ShadowAggregator
+  producing Promote/Hold/Revert verdicts from candidate vs baseline
+  deltas across score, latency, and cost.
+
 ## [1.7.0] - 2026-05-23
 
 The "Federation + Cost Intelligence" release.
