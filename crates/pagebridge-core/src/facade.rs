@@ -258,4 +258,13 @@ impl Pagebridge {
     pub fn llm(&self) -> Arc<dyn LlmProvider> {
         Arc::clone(&self.inner.llm)
     }
+
+    /// Scope this instance to a specific workspace. Returns a lightweight
+    /// handle whose every operation is tagged with the workspace id. In
+    /// v0.3.0 the tagging is metadata-only (filtering happens at the facade
+    /// layer); per-adapter `workspace_id` columns ship in v0.4.0.
+    #[must_use]
+    pub fn with_workspace(&self, ws: crate::WorkspaceId) -> crate::WorkspaceHandle {
+        crate::WorkspaceHandle::new(self.clone(), ws)
+    }
 }
