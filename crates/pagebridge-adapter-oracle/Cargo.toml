@@ -1,0 +1,33 @@
+[package]
+name = "pagebridge-adapter-oracle"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Oracle Database storage adapter for pagebridge"
+
+[features]
+# The `oracle` crate requires the Oracle Instant Client SDK on the build host.
+# Without the SDK the workspace still builds, but constructors return an
+# explicit "driver not enabled" error. Switch on `oracle-driver` to compile
+# against a real Oracle client.
+default = []
+oracle-driver = ["dep:oracle"]
+
+[dependencies]
+pagebridge-core.workspace = true
+async-trait.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+parking_lot.workspace = true
+oracle = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true
