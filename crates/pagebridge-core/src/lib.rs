@@ -15,6 +15,7 @@ pub mod llm;
 pub mod prompts;
 pub mod record;
 pub mod search;
+pub mod replication;
 pub mod trace;
 pub mod types;
 pub mod workspace;
@@ -30,6 +31,9 @@ pub use llm::{
     LlmConfig, LlmProvider, StreamChunk, VisionImage,
 };
 pub use prompts::{PromptContext, PromptLibrary};
+pub use replication::{
+    InvalidationEvent, InvalidationKind, ReplicationConfig, ReplicationRole,
+};
 pub use workspace::WorkspaceId;
 pub use workspace_handle::WorkspaceHandle;
 pub use record::{NodeLevel, NodeRecord, NodeSummary};
