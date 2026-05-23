@@ -3215,6 +3215,97 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-adapter-arango"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-bigquery"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-cassandra"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-clickhouse"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-cockroach"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-databricks"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-duckdb"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-adapter-embedded"
 version = "1.2.0"
 dependencies = [
@@ -3232,6 +3323,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-adapter-fjall"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-foundationdb"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-adapter-jsonfile"
 version = "1.2.0"
 dependencies = [
@@ -3241,6 +3358,19 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-lmdb"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
  "tokio",
  "tracing",
 ]
@@ -3296,6 +3426,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-adapter-odbc"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-adapter-oracle"
 version = "1.2.0"
 dependencies = [
@@ -3325,6 +3468,97 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-adapter-redis"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-redshift"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-rocksdb"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-scylla"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-sled"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-snowflake"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-spanner"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-adapter-sqlite"
 version = "1.2.0"
 dependencies = [
@@ -3334,6 +3568,58 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tempfile",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-surrealdb"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-tidb"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-timescale"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-adapter-yugabyte"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
  "tokio",
  "tracing",
 ]

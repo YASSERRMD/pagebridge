@@ -9,6 +9,28 @@ members = [
     "crates/pagebridge-adapter-mysql",
     "crates/pagebridge-adapter-mssql",
     "crates/pagebridge-adapter-oracle",
+    "crates/pagebridge-adapter-cockroach",
+    "crates/pagebridge-adapter-yugabyte",
+    "crates/pagebridge-adapter-spanner",
+    "crates/pagebridge-adapter-tidb",
+    "crates/pagebridge-adapter-cassandra",
+    "crates/pagebridge-adapter-scylla",
+    "crates/pagebridge-adapter-clickhouse",
+    "crates/pagebridge-adapter-duckdb",
+    "crates/pagebridge-adapter-timescale",
+    "crates/pagebridge-adapter-snowflake",
+    "crates/pagebridge-adapter-bigquery",
+    "crates/pagebridge-adapter-redshift",
+    "crates/pagebridge-adapter-databricks",
+    "crates/pagebridge-adapter-lmdb",
+    "crates/pagebridge-adapter-rocksdb",
+    "crates/pagebridge-adapter-sled",
+    "crates/pagebridge-adapter-fjall",
+    "crates/pagebridge-adapter-arango",
+    "crates/pagebridge-adapter-surrealdb",
+    "crates/pagebridge-adapter-foundationdb",
+    "crates/pagebridge-adapter-redis",
+    "crates/pagebridge-adapter-odbc",
     "crates/pagebridge-llm-ollama",
     "crates/pagebridge-llm-openai",
     "crates/pagebridge-llm-anthropic",
@@ -138,6 +160,28 @@ pagebridge-adapter-jsonfile = { path = "crates/pagebridge-adapter-jsonfile", ver
 pagebridge-adapter-mysql = { path = "crates/pagebridge-adapter-mysql", version = "1.2.0" }
 pagebridge-adapter-mssql = { path = "crates/pagebridge-adapter-mssql", version = "1.2.0" }
 pagebridge-adapter-oracle = { path = "crates/pagebridge-adapter-oracle", version = "1.2.0" }
+pagebridge-adapter-cockroach = { path = "crates/pagebridge-adapter-cockroach", version = "1.2.0" }
+pagebridge-adapter-yugabyte = { path = "crates/pagebridge-adapter-yugabyte", version = "1.2.0" }
+pagebridge-adapter-spanner = { path = "crates/pagebridge-adapter-spanner", version = "1.2.0" }
+pagebridge-adapter-tidb = { path = "crates/pagebridge-adapter-tidb", version = "1.2.0" }
+pagebridge-adapter-cassandra = { path = "crates/pagebridge-adapter-cassandra", version = "1.2.0" }
+pagebridge-adapter-scylla = { path = "crates/pagebridge-adapter-scylla", version = "1.2.0" }
+pagebridge-adapter-clickhouse = { path = "crates/pagebridge-adapter-clickhouse", version = "1.2.0" }
+pagebridge-adapter-duckdb = { path = "crates/pagebridge-adapter-duckdb", version = "1.2.0" }
+pagebridge-adapter-timescale = { path = "crates/pagebridge-adapter-timescale", version = "1.2.0" }
+pagebridge-adapter-snowflake = { path = "crates/pagebridge-adapter-snowflake", version = "1.2.0" }
+pagebridge-adapter-bigquery = { path = "crates/pagebridge-adapter-bigquery", version = "1.2.0" }
+pagebridge-adapter-redshift = { path = "crates/pagebridge-adapter-redshift", version = "1.2.0" }
+pagebridge-adapter-databricks = { path = "crates/pagebridge-adapter-databricks", version = "1.2.0" }
+pagebridge-adapter-lmdb = { path = "crates/pagebridge-adapter-lmdb", version = "1.2.0" }
+pagebridge-adapter-rocksdb = { path = "crates/pagebridge-adapter-rocksdb", version = "1.2.0" }
+pagebridge-adapter-sled = { path = "crates/pagebridge-adapter-sled", version = "1.2.0" }
+pagebridge-adapter-fjall = { path = "crates/pagebridge-adapter-fjall", version = "1.2.0" }
+pagebridge-adapter-arango = { path = "crates/pagebridge-adapter-arango", version = "1.2.0" }
+pagebridge-adapter-surrealdb = { path = "crates/pagebridge-adapter-surrealdb", version = "1.2.0" }
+pagebridge-adapter-foundationdb = { path = "crates/pagebridge-adapter-foundationdb", version = "1.2.0" }
+pagebridge-adapter-redis = { path = "crates/pagebridge-adapter-redis", version = "1.2.0" }
+pagebridge-adapter-odbc = { path = "crates/pagebridge-adapter-odbc", version = "1.2.0" }
 pagebridge-llm-ollama = { path = "crates/pagebridge-llm-ollama", version = "1.2.0" }
 pagebridge-llm-openai = { path = "crates/pagebridge-llm-openai", version = "1.2.0" }
 pagebridge-llm-anthropic = { path = "crates/pagebridge-llm-anthropic", version = "1.2.0" }
