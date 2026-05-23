@@ -32,6 +32,8 @@ pub use pagebridge_adapter_postgres::PostgresAdapter;
 #[cfg(feature = "sqlite")]
 pub use pagebridge_adapter_sqlite::SqliteAdapter;
 
+#[cfg(feature = "admin")]
+pub use pagebridge_admin as admin;
 #[cfg(feature = "anthropic")]
 pub use pagebridge_llm_anthropic::AnthropicProvider;
 #[cfg(feature = "llamacpp")]

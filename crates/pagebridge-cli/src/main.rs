@@ -95,6 +95,15 @@ enum Cmd {
         #[arg(long)]
         stream: bool,
     },
+    /// Run the built-in admin web UI and JSON API.
+    Serve {
+        /// Address to bind. Defaults to 127.0.0.1:7676.
+        #[arg(long, default_value = "127.0.0.1:7676")]
+        bind: String,
+        /// Allow binding to non-loopback addresses. Required for remote access.
+        #[arg(long)]
+        insecure_allow_remote: bool,
+    },
     /// List ingested documents.
     List,
     /// Print appliance and adapter statistics.
@@ -296,6 +305,16 @@ async fn main() -> Result<()> {
                     answer.trace.total_output_tokens,
                 );
             }
+        }
+        Cmd::Serve { bind, insecure_allow_remote } => {
+            let cfg = PbConfig::load(&config_path).unwrap_or_default();
+            let bridge = open_bridge(&cfg).await?;
+            let addr: std::net::SocketAddr = bind.parse()?;
+            let opts = pagebridge::admin::AdminOptions {
+                allow_remote: insecure_allow_remote,
+            };
+            println!("pagebridge admin starting on http://{addr}");
+            pagebridge::admin::serve_with_options(bridge, addr, opts).await?;
         }
         Cmd::List => {
             let cfg = PbConfig::load(&config_path).unwrap_or_default();
