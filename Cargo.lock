@@ -3186,7 +3186,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "pagebridge-adapter-embedded",
@@ -3216,7 +3216,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-embedded"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "bincode",
@@ -3233,7 +3233,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-jsonfile"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3247,7 +3247,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-mongodb"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "futures",
@@ -3263,7 +3263,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-mssql"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "bb8",
@@ -3281,7 +3281,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-mysql"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "futures",
@@ -3297,7 +3297,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-oracle"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "oracle",
@@ -3311,7 +3311,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-postgres"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3326,7 +3326,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-sqlite"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3340,7 +3340,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-admin"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-stream",
  "axum",
@@ -3358,7 +3358,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-auth"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "biscuit-auth",
  "hex",
@@ -3374,7 +3374,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-cli"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -3394,7 +3394,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -3413,7 +3413,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-eval"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "csv",
@@ -3426,7 +3426,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-links"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "pagebridge-core",
  "parking_lot",
@@ -3439,7 +3439,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-anthropic"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3453,7 +3453,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-llamacpp"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "llama-cpp-2",
@@ -3468,7 +3468,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-ollama"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -3484,7 +3484,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-openai"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3498,7 +3498,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-mcp"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -3512,7 +3512,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-obs"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "parking_lot",
  "prometheus",
@@ -3521,7 +3521,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-plugin-abi"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "parking_lot",
  "serde",
@@ -3532,7 +3532,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-py"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "pagebridge",
  "pagebridge-core",
@@ -3545,7 +3545,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-vision"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
