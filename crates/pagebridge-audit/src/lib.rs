@@ -31,6 +31,7 @@ pub mod error;
 pub mod event;
 pub mod merkle;
 pub mod sign;
+pub mod schema;
 pub mod sinks;
 pub mod transparency;
 pub mod verifier;
