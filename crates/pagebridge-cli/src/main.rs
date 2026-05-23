@@ -91,6 +91,9 @@ enum Cmd {
         question: String,
         #[arg(long)]
         doc: Option<String>,
+        /// Stream tokens to stdout as they arrive.
+        #[arg(long)]
+        stream: bool,
     },
     /// List ingested documents.
     List,
@@ -207,9 +210,63 @@ async fn main() -> Result<()> {
                 );
             }
         }
-        Cmd::Ask { question, doc } => {
+        Cmd::Ask { question, doc, stream } => {
             let cfg = PbConfig::load(&config_path).unwrap_or_default();
             let bridge = open_bridge(&cfg).await?;
+            if stream {
+                use futures::StreamExt;
+                use std::io::Write;
+                let mut s = match &doc {
+                    Some(d) => bridge.ask_stream_in_doc(&DocId::new(d.clone())?, &question).await?,
+                    None => bridge.ask_stream(&question).await?,
+                };
+                let mut stdout = std::io::stdout().lock();
+                writeln!(stdout, "Answer:")?;
+                let mut citations = Vec::new();
+                let mut trace_summary = None;
+                while let Some(chunk) = s.next().await {
+                    match chunk? {
+                        pagebridge::AnswerChunk::Token { text } => {
+                            write!(stdout, "{text}")?;
+                            stdout.flush()?;
+                        }
+                        pagebridge::AnswerChunk::Citation { citation } => {
+                            citations.push(citation);
+                        }
+                        pagebridge::AnswerChunk::Done { trace, citations: cs } => {
+                            if citations.is_empty() {
+                                citations = cs;
+                            }
+                            trace_summary = Some(trace);
+                        }
+                    }
+                }
+                writeln!(stdout)?;
+                if !citations.is_empty() {
+                    writeln!(stdout, "\n{}", style("Citations:").bold())?;
+                    for (i, c) in citations.iter().enumerate() {
+                        writeln!(
+                            stdout,
+                            "  [{}] {} / {} ({})",
+                            i + 1,
+                            c.doc_title,
+                            c.section_title,
+                            c.node_id
+                        )?;
+                    }
+                }
+                if let Some(t) = trace_summary {
+                    writeln!(
+                        stdout,
+                        "\nTrace: {} LLM calls, {}ms, {} input + {} output tokens",
+                        t.total_llm_calls,
+                        t.duration_ms,
+                        t.total_input_tokens,
+                        t.total_output_tokens,
+                    )?;
+                }
+                return Ok(());
+            }
             let answer = if let Some(d) = doc {
                 bridge.ask_in_doc(&DocId::new(d)?, &question).await?
             } else {
