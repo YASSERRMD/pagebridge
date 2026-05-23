@@ -3494,6 +3494,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-llm-bedrock"
+version = "1.2.0"
+dependencies = [
+ "pagebridge-core",
+]
+
+[[package]]
+name = "pagebridge-llm-cohere"
+version = "1.2.0"
+dependencies = [
+ "pagebridge-core",
+]
+
+[[package]]
+name = "pagebridge-llm-cost"
+version = "1.2.0"
+dependencies = [
+ "pagebridge-core",
+]
+
+[[package]]
+name = "pagebridge-llm-gemini"
+version = "1.2.0"
+dependencies = [
+ "pagebridge-core",
+]
+
+[[package]]
 name = "pagebridge-llm-llamacpp"
 version = "1.2.0"
 dependencies = [
@@ -3506,6 +3534,13 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "pagebridge-llm-mlx"
+version = "1.2.0"
+dependencies = [
+ "pagebridge-core",
 ]
 
 [[package]]
@@ -3536,6 +3571,13 @@ dependencies = [
  "tokio",
  "tracing",
  "wiremock",
+]
+
+[[package]]
+name = "pagebridge-llm-routing"
+version = "1.2.0"
+dependencies = [
+ "pagebridge-core",
 ]
 
 [[package]]
@@ -3602,6 +3644,20 @@ dependencies = [
  "tokio",
  "tracing",
  "ulid",
+]
+
+[[package]]
+name = "pagebridge-reranker"
+version = "1.2.0"
+dependencies = [
+ "async-trait",
+ "pagebridge-core",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
