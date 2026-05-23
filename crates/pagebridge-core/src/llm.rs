@@ -68,6 +68,19 @@ pub struct CompletionRequest {
     pub max_tokens: Option<u32>,
     pub temperature: Option<f32>,
     pub stop: Vec<String>,
+    /// Optional inline images attached to the last user message. Providers
+    /// that support vision (see [`LlmProvider::supports_vision`]) consume
+    /// these; non-vision providers ignore them.
+    pub images: Vec<VisionImage>,
+}
+
+/// An inline image carried in a completion request.
+#[derive(Debug, Clone)]
+pub struct VisionImage {
+    /// Raw image bytes. Format inferred from `media_type`.
+    pub bytes: Vec<u8>,
+    /// IANA media type, e.g. `image/png`, `image/jpeg`.
+    pub media_type: String,
 }
 
 impl CompletionRequest {
@@ -175,6 +188,12 @@ pub trait LlmProvider: Send + Sync + 'static {
 
     /// Does this provider support grammar-constrained JSON? Default false.
     fn supports_grammar(&self) -> bool {
+        false
+    }
+
+    /// Does this provider consume `CompletionRequest::images`? Default false.
+    /// Pagebridge's vision-mode ingester gates rasterization on this method.
+    fn supports_vision(&self) -> bool {
         false
     }
 

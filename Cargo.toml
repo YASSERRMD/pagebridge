@@ -17,6 +17,7 @@ members = [
     "crates/pagebridge-mcp",
     "crates/pagebridge-obs",
     "crates/pagebridge-auth",
+    "crates/pagebridge-vision",
     "crates/pagebridge",
     "crates/pagebridge-py",
     "crates/pagebridge-cli",
@@ -129,6 +130,7 @@ pagebridge-admin = { path = "crates/pagebridge-admin", version = "0.1.0" }
 pagebridge-mcp = { path = "crates/pagebridge-mcp", version = "0.1.0" }
 pagebridge-obs = { path = "crates/pagebridge-obs", version = "0.1.0" }
 pagebridge-auth = { path = "crates/pagebridge-auth", version = "0.1.0" }
+pagebridge-vision = { path = "crates/pagebridge-vision", version = "0.1.0" }
 pagebridge = { path = "crates/pagebridge", version = "0.1.0" }
 
 [workspace.lints.clippy]

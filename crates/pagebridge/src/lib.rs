@@ -12,7 +12,8 @@ pub use pagebridge_core::{
     IngestParams, LlmConfig, LlmProvider, Navigation, NavigationConfig, NodeId, NodeLevel,
     NodeRecord, NodeSummary, Pagebridge, PagebridgeError, PagebridgeOptions, PagebridgeStats,
     PromptContext, PromptLibrary, QueryTrace, Result, SearchHit, SourceKind, StorageAdapter,
-    StreamChunk, SummaryCacheEntry, TraceStep, TraceStorageMode, WorkspaceHandle, WorkspaceId,
+    StreamChunk, SummaryCacheEntry, TraceStep, TraceStorageMode, VisionImage, WorkspaceHandle,
+    WorkspaceId,
 };
 
 #[cfg(feature = "embedded")]
@@ -40,6 +41,8 @@ pub use pagebridge_mcp as mcp;
 pub use pagebridge_obs as obs;
 #[cfg(feature = "auth")]
 pub use pagebridge_auth as auth;
+#[cfg(feature = "vision")]
+pub use pagebridge_vision as vision;
 #[cfg(feature = "anthropic")]
 pub use pagebridge_llm_anthropic::AnthropicProvider;
 #[cfg(feature = "llamacpp")]
