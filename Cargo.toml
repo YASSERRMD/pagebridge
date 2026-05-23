@@ -33,6 +33,8 @@ description = "Cognitive retrieval for the database you already have"
 tokio = { version = "1.40", features = ["full"] }
 async-trait = "0.1"
 futures = "0.3"
+async-stream = "0.3"
+tokio-stream = "0.1"
 
 # Error handling
 thiserror = "1.0"

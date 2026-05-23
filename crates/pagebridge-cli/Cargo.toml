@@ -24,6 +24,7 @@ toml = "0.8"
 console.workspace = true
 indicatif.workspace = true
 dirs = "5"
+futures.workspace = true
 
 [dev-dependencies]
 assert_cmd = "2"

@@ -7,9 +7,11 @@
     clippy::cast_possible_truncation
 )]
 
+use std::pin::Pin;
 use std::sync::Arc;
 
 use dashmap::DashMap;
+use futures::Stream;
 use tokio::task::JoinHandle;
 
 use crate::adapter::StorageAdapter;
@@ -21,8 +23,8 @@ use crate::prompts::PromptLibrary;
 use crate::search::{navigate, synthesize_answer, NavigationOutcome};
 use crate::trace::TraceBuilder;
 use crate::types::{
-    Answer, DocumentEntry, DocumentHandle, IngestParams, Navigation, NavigationConfig,
-    PagebridgeStats, SearchHit, TraceStorageMode,
+    Answer, AnswerChunk, DocumentEntry, DocumentHandle, IngestParams, Navigation,
+    NavigationConfig, PagebridgeStats, SearchHit, TraceStorageMode,
 };
 
 /// Bundle of configuration knobs for the `Pagebridge` facade.
@@ -116,6 +118,55 @@ impl Pagebridge {
     /// Ask a question scoped to one document.
     pub async fn ask_in_doc(&self, doc_id: &DocId, question: &str) -> Result<Answer> {
         self.ask_inner(question, Some(doc_id)).await
+    }
+
+    /// Streaming `ask`: navigation runs to completion first, then synthesis is
+    /// streamed token-by-token through the LLM. Inline `[[CITE:<node_id>]]`
+    /// markers in the model output are parsed out and emitted as
+    /// `AnswerChunk::Citation` events; the final chunk is `AnswerChunk::Done`
+    /// with the full trace and consolidated citation list.
+    pub async fn ask_stream(
+        &self,
+        question: &str,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<AnswerChunk>> + Send>>> {
+        self.ask_stream_inner(question, None).await
+    }
+
+    /// Streaming `ask` scoped to one document.
+    pub async fn ask_stream_in_doc(
+        &self,
+        doc_id: &DocId,
+        question: &str,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<AnswerChunk>> + Send>>> {
+        self.ask_stream_inner(question, Some(doc_id)).await
+    }
+
+    async fn ask_stream_inner(
+        &self,
+        question: &str,
+        doc_filter: Option<&DocId>,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<AnswerChunk>> + Send>>> {
+        let mut trace = TraceBuilder::new(question);
+        let outcome = navigate(
+            &self.inner.storage,
+            &self.inner.llm,
+            &self.inner.prompts,
+            question,
+            self.inner.nav_config,
+            doc_filter,
+            &mut trace,
+        )
+        .await?;
+        let stream = crate::search::synthesize_answer_stream(
+            Arc::clone(&self.inner.storage),
+            Arc::clone(&self.inner.llm),
+            Arc::clone(&self.inner.prompts),
+            question.to_owned(),
+            outcome.selected_leaves,
+            trace,
+        )
+        .await?;
+        Ok(Box::pin(stream))
     }
 
     async fn ask_inner(&self, question: &str, doc_filter: Option<&DocId>) -> Result<Answer> {
