@@ -4,6 +4,21 @@ All notable changes to pagebridge land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [SemVer](https://semver.org/).
 
+## [1.9.0] - 2026-05-23
+
+The "Edge to Cloud" release.
+
+### Added
+
+- New crate `pagebridge-hybrid`: ConfidenceEstimator scoring local
+  answers, EscalationPolicy with confidence + remaining-latency
+  thresholds. Privacy mode: only the question + the most-relevant
+  local snippet escalate to the cloud.
+- New crate `pagebridge-wasm`: crate-type [cdylib, rlib] for native
+  test shim and wasm32-unknown-unknown builds. ask_shim exercises
+  the JS<->Rust bridge contract. Real browser bridge (wasm-bindgen +
+  OPFS) gated behind the `browser` feature.
+
 ## [1.8.0] - 2026-05-23
 
 The "Explainability + Causal Analysis" release.

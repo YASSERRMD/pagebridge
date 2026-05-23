@@ -3186,7 +3186,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "anyhow",
  "pagebridge-adapter-embedded",
@@ -3216,7 +3216,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-arango"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3229,7 +3229,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-bigquery"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3242,7 +3242,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-cassandra"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3255,7 +3255,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-clickhouse"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3268,7 +3268,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-cockroach"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3281,7 +3281,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-databricks"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3294,7 +3294,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-duckdb"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3307,7 +3307,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-embedded"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "bincode",
@@ -3324,7 +3324,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-fjall"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3337,7 +3337,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-foundationdb"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3350,7 +3350,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-jsonfile"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3364,7 +3364,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-lmdb"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3377,7 +3377,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-mongodb"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "futures",
@@ -3393,7 +3393,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-mssql"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "bb8",
@@ -3411,7 +3411,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-mysql"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "futures",
@@ -3427,7 +3427,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-odbc"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3440,7 +3440,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-oracle"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "oracle",
@@ -3454,7 +3454,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-postgres"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3469,7 +3469,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-redis"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3482,7 +3482,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-redshift"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3495,7 +3495,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-rocksdb"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3508,7 +3508,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-scylla"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3521,7 +3521,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-sled"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3534,7 +3534,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-snowflake"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3547,7 +3547,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-spanner"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3560,7 +3560,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-sqlite"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3574,7 +3574,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-surrealdb"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3587,7 +3587,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-tidb"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3600,7 +3600,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-timescale"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3613,7 +3613,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-adapter-yugabyte"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3626,7 +3626,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-admin"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-stream",
  "axum",
@@ -3644,7 +3644,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-audit"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "ed25519-dalek",
@@ -3665,7 +3665,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-auth"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "biscuit-auth",
  "hex",
@@ -3681,7 +3681,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-budget"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "pagebridge-core",
  "pagebridge-llm-cost",
@@ -3695,7 +3695,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-build"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "hex",
  "pagebridge-core",
@@ -3709,7 +3709,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-causal"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "pagebridge-core",
  "serde",
@@ -3721,7 +3721,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-cli"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -3745,7 +3745,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-core"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -3765,7 +3765,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-deterministic"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "hex",
@@ -3781,7 +3781,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-eval"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "csv",
@@ -3794,7 +3794,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-federation"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "futures",
@@ -3808,7 +3808,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-hotreload"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -3823,7 +3823,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-hybrid"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "pagebridge-core",
  "serde",
@@ -3835,7 +3835,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-injection"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "hex",
  "pagebridge-core",
@@ -3850,7 +3850,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-links"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "pagebridge-core",
  "parking_lot",
@@ -3863,7 +3863,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-anthropic"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3877,7 +3877,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-bedrock"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3889,7 +3889,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-cohere"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3902,7 +3902,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-cost"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "pagebridge-core",
  "parking_lot",
@@ -3915,7 +3915,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-gemini"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3928,7 +3928,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-llamacpp"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "llama-cpp-2",
@@ -3943,7 +3943,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-mlx"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3955,7 +3955,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-ollama"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -3971,7 +3971,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-openai"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3985,7 +3985,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-llm-routing"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -3998,7 +3998,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-mcp"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -4012,7 +4012,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-obs"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "parking_lot",
  "prometheus",
@@ -4021,7 +4021,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-plugin-abi"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "parking_lot",
  "serde",
@@ -4032,7 +4032,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-py"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "pagebridge",
  "pagebridge-core",
@@ -4045,7 +4045,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-quality"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -4059,7 +4059,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-receipt"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "ed25519-dalek",
@@ -4078,7 +4078,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-reranker"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -4092,7 +4092,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-sensitivity"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "pagebridge-core",
  "regex",
@@ -4105,7 +4105,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-shadow"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "pagebridge-core",
  "pagebridge-quality",
@@ -4119,7 +4119,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-slo"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -4133,7 +4133,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-tenant"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -4147,7 +4147,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-timetravel"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "hex",
@@ -4166,7 +4166,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-vision"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "async-trait",
  "pagebridge-core",
@@ -4179,7 +4179,7 @@ dependencies = [
 
 [[package]]
 name = "pagebridge-wasm"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "pagebridge-core",
  "serde",
