@@ -55,6 +55,7 @@ members = [
     "crates/pagebridge-llm-cohere",
     "crates/pagebridge-llm-mlx",
     "crates/pagebridge-slo",
+    "crates/pagebridge-quality",
     "crates/pagebridge",
     "crates/pagebridge-py",
     "crates/pagebridge-cli",
@@ -207,6 +208,7 @@ pagebridge-llm-bedrock = { path = "crates/pagebridge-llm-bedrock", version = "1.
 pagebridge-llm-cohere = { path = "crates/pagebridge-llm-cohere", version = "1.3.0" }
 pagebridge-llm-mlx = { path = "crates/pagebridge-llm-mlx", version = "1.3.0" }
 pagebridge-slo = { path = "crates/pagebridge-slo", version = "1.3.0" }
+pagebridge-quality = { path = "crates/pagebridge-quality", version = "1.3.0" }
 pagebridge = { path = "crates/pagebridge", version = "1.3.0" }
 
 [workspace.lints.clippy]
