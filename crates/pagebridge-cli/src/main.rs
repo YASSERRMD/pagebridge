@@ -58,6 +58,41 @@ struct Cli {
 }
 
 #[derive(Debug, Subcommand)]
+enum AuthCmd {
+    /// Generate a new root keypair and write it to disk.
+    CreateKey {
+        /// Output path for the private key (default ~/.pagebridge/root.key).
+        #[arg(long)]
+        out: Option<String>,
+    },
+    /// Mint a capability token signed by the root key.
+    Mint {
+        /// Comma-separated capability list, e.g. "read,ask".
+        #[arg(long, default_value = "read")]
+        rights: String,
+        /// Optional workspace scope.
+        #[arg(long)]
+        workspace: Option<String>,
+        /// Token lifetime, e.g. "24h", "60m", "30s".
+        #[arg(long, default_value = "24h")]
+        ttl: String,
+        /// Optional human-readable note embedded in the token.
+        #[arg(long)]
+        note: Option<String>,
+        /// Root key path (default ~/.pagebridge/root.key).
+        #[arg(long)]
+        key: Option<String>,
+    },
+    /// Decode and verify a token, printing the carried capabilities.
+    Introspect {
+        token: String,
+        /// Root key path (default ~/.pagebridge/root.key).
+        #[arg(long)]
+        key: Option<String>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
 enum Cmd {
     /// Initialize storage at the configured path.
     Init {
@@ -97,6 +132,9 @@ enum Cmd {
     },
     /// Run the Model Context Protocol server over stdio (for Claude Code / Desktop / Cursor).
     Mcp,
+    /// Capability token administration.
+    #[command(subcommand)]
+    Auth(AuthCmd),
     /// Run the built-in admin web UI and JSON API.
     Serve {
         /// Address to bind. Defaults to 127.0.0.1:7676.
@@ -313,6 +351,7 @@ async fn main() -> Result<()> {
             let bridge = open_bridge(&cfg).await?;
             pagebridge::mcp::serve_stdio(bridge).await?;
         }
+        Cmd::Auth(sub) => run_auth(sub)?,
         Cmd::Serve { bind, insecure_allow_remote } => {
             let cfg = PbConfig::load(&config_path).unwrap_or_default();
             let bridge = open_bridge(&cfg).await?;
@@ -515,4 +554,80 @@ async fn open_bridge(cfg: &PbConfig) -> Result<Pagebridge> {
         other => bail!("unknown LLM provider: {other}"),
     };
     Ok(Pagebridge::new(storage, llm).await?)
+}
+
+
+fn default_key_path() -> PathBuf {
+    dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".pagebridge")
+        .join("root.key")
+}
+
+fn parse_ttl(s: &str) -> Result<std::time::Duration> {
+    let s = s.trim();
+    let (num, unit) = s.split_at(
+        s.find(|c: char| !c.is_ascii_digit())
+            .unwrap_or(s.len()),
+    );
+    let n: u64 = num.parse().map_err(|_| anyhow!("invalid ttl number: {s}"))?;
+    let secs = match unit.trim() {
+        "" | "s" => n,
+        "m" => n * 60,
+        "h" => n * 60 * 60,
+        "d" => n * 60 * 60 * 24,
+        other => bail!("unknown ttl unit: {other}"),
+    };
+    Ok(std::time::Duration::from_secs(secs))
+}
+
+fn run_auth(cmd: AuthCmd) -> Result<()> {
+    use pagebridge_auth::{mint as auth_mint, verify as auth_verify, Capability, CapabilitySet, RootKey, TokenSpec};
+    match cmd {
+        AuthCmd::CreateKey { out } => {
+            let path = out.map_or_else(default_key_path, PathBuf::from);
+            let key = RootKey::generate();
+            key.save(&path)?;
+            println!("root key written to {}", path.display());
+            println!("public key (hex): {}", key.public_hex);
+        }
+        AuthCmd::Mint { rights, workspace, ttl, note, key } => {
+            let key_path = key.map_or_else(default_key_path, PathBuf::from);
+            let root = RootKey::load(&key_path)
+                .with_context(|| format!("load root key from {}", key_path.display()))?;
+            let mut caps = CapabilitySet::new();
+            for r in rights.split(',') {
+                let trimmed = r.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                caps.insert(trimmed.parse::<Capability>()?);
+            }
+            let spec = TokenSpec {
+                capabilities: caps,
+                workspace,
+                ttl: Some(parse_ttl(&ttl)?),
+                note,
+            };
+            let token = auth_mint(&root.keypair, &spec)?;
+            println!("{token}");
+        }
+        AuthCmd::Introspect { token, key } => {
+            let key_path = key.map_or_else(default_key_path, PathBuf::from);
+            let root = RootKey::load(&key_path)
+                .with_context(|| format!("load root key from {}", key_path.display()))?;
+            let v = auth_verify(&token, &root.keypair.public())?;
+            println!("capabilities:");
+            for cap in v.capabilities.iter() {
+                println!("  - {}", cap.as_str());
+            }
+            if let Some(ws) = v.workspace {
+                println!("workspace: {ws}");
+            }
+            if let Some(exp) = v.expires_at {
+                println!("expires_at: {exp} (unix)");
+            }
+        }
+    }
+    Ok(())
 }

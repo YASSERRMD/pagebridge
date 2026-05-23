@@ -38,6 +38,8 @@ pub use pagebridge_admin as admin;
 pub use pagebridge_mcp as mcp;
 #[cfg(feature = "obs")]
 pub use pagebridge_obs as obs;
+#[cfg(feature = "auth")]
+pub use pagebridge_auth as auth;
 #[cfg(feature = "anthropic")]
 pub use pagebridge_llm_anthropic::AnthropicProvider;
 #[cfg(feature = "llamacpp")]
