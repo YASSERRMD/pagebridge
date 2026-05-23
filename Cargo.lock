@@ -3208,6 +3208,7 @@ dependencies = [
  "pagebridge-llm-openai",
  "pagebridge-mcp",
  "pagebridge-obs",
+ "pagebridge-plugin-abi",
  "pagebridge-vision",
  "serde_json",
  "tokio",
@@ -3515,6 +3516,17 @@ version = "0.1.0"
 dependencies = [
  "parking_lot",
  "prometheus",
+ "tracing",
+]
+
+[[package]]
+name = "pagebridge-plugin-abi"
+version = "0.1.0"
+dependencies = [
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
  "tracing",
 ]
 
