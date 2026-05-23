@@ -4,6 +4,32 @@ All notable changes to pagebridge land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [SemVer](https://semver.org/).
 
+## [1.4.0] - 2026-05-23
+
+The "Production-Grade Operations" release. Pagebridge gains SLO
+budgets, continuous answer-quality monitoring, and reproducible
+index builds.
+
+### Added
+
+- New crate `pagebridge-slo`: `SloConfig` (p99 latency / error rate /
+  monthly cost / per-question token caps), `SloMonitor` with rolling
+  24h window and Prometheus-compatible multi-window burn-rate alarms
+  (14.4x fast / 1x slow), `halt_signal` for graceful budget-aware
+  early returns.
+- New crate `pagebridge-quality`: `Judge` trait, `Scorer` with
+  configurable sample rate, `QualityStore` time-series of
+  (faithfulness, citation_accuracy, answer_relevance) score triples,
+  `DriftDetector` for 7-day vs 30-day baseline alarms.
+- New crate `pagebridge-build`: `BuildManifest` recipe with
+  `input_hash` for proving two recipes produce identical artifacts,
+  `diff` for field-level deltas between two manifests,
+  `verify_artifacts` for byte-checking produced outputs.
+
+### Backward compatibility
+
+Fully backward compatible. The three new crates are opt-in.
+
 ## [1.3.0] - 2026-05-23
 
 The "Unified Provider + Adapter Coverage" release. Pagebridge's
