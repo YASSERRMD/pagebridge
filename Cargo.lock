@@ -3512,6 +3512,12 @@ name = "pagebridge-llm-cost"
 version = "1.2.0"
 dependencies = [
  "pagebridge-core",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

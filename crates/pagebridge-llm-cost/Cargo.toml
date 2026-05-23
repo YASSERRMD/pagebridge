@@ -6,10 +6,18 @@ rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "Placeholder for pagebridge-llm-cost (lands in this phase)"
+description = "Per-provider per-model token cost catalog for pagebridge"
 
 [dependencies]
 pagebridge-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+parking_lot.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [lints]
 workspace = true
