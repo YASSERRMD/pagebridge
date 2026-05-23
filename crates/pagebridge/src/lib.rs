@@ -45,6 +45,8 @@ pub use pagebridge_auth as auth;
 pub use pagebridge_vision as vision;
 #[cfg(feature = "links")]
 pub use pagebridge_links as links;
+#[cfg(feature = "eval")]
+pub use pagebridge_eval as eval;
 #[cfg(feature = "anthropic")]
 pub use pagebridge_llm_anthropic::AnthropicProvider;
 #[cfg(feature = "llamacpp")]
