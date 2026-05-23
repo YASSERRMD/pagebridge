@@ -24,6 +24,8 @@ pub use pagebridge_adapter_mongodb::MongoAdapter;
 pub use pagebridge_adapter_mssql::MSSqlAdapter;
 #[cfg(feature = "mysql")]
 pub use pagebridge_adapter_mysql::MySqlAdapter;
+#[cfg(feature = "oracle")]
+pub use pagebridge_adapter_oracle::OracleAdapter;
 #[cfg(feature = "postgres")]
 pub use pagebridge_adapter_postgres::PostgresAdapter;
 #[cfg(feature = "sqlite")]
