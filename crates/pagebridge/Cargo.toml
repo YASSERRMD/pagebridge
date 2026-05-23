@@ -29,6 +29,7 @@ pagebridge-auth = { workspace = true, optional = true }
 pagebridge-vision = { workspace = true, optional = true }
 pagebridge-links = { workspace = true, optional = true }
 pagebridge-eval = { workspace = true, optional = true }
+pagebridge-plugin-abi = { workspace = true, optional = true }
 
 [features]
 default = ["sqlite", "embedded", "jsonfile", "ollama", "openai"]
@@ -53,9 +54,10 @@ auth = ["dep:pagebridge-auth"]
 vision = ["dep:pagebridge-vision"]
 links = ["dep:pagebridge-links"]
 eval = ["dep:pagebridge-eval"]
+plugin = ["dep:pagebridge-plugin-abi"]
 all-adapters = ["postgres", "sqlite", "mongodb", "embedded", "jsonfile", "mysql", "mssql", "oracle"]
 all-llms = ["ollama", "openai", "anthropic", "llamacpp"]
-full = ["all-adapters", "all-llms", "admin", "mcp", "obs", "auth", "vision", "links", "eval"]
+full = ["all-adapters", "all-llms", "admin", "mcp", "obs", "auth", "vision", "links", "eval", "plugin"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

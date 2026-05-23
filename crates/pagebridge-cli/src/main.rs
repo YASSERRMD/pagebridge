@@ -135,6 +135,9 @@ enum Cmd {
     /// Capability token administration.
     #[command(subcommand)]
     Auth(AuthCmd),
+    /// Plugin management (list / count installed plugins).
+    #[command(subcommand)]
+    Plugins(PluginsCmd),
     /// Run the built-in admin web UI and JSON API.
     Serve {
         /// Address to bind. Defaults to 127.0.0.1:7676.
@@ -164,6 +167,14 @@ enum Cmd {
     },
     /// Health check (storage + LLM).
     Health,
+}
+
+#[derive(Debug, Subcommand)]
+enum PluginsCmd {
+    /// List installed plugins.
+    List,
+    /// Print the supported ABI version.
+    AbiVersion,
 }
 
 #[derive(Debug, Subcommand)]
@@ -352,6 +363,23 @@ async fn main() -> Result<()> {
             pagebridge::mcp::serve_stdio(bridge).await?;
         }
         Cmd::Auth(sub) => run_auth(sub)?,
+        Cmd::Plugins(sub) => {
+            use pagebridge::plugin::{PluginRegistry, ABI_VERSION};
+            let reg = PluginRegistry::new();
+            match sub {
+                PluginsCmd::List => {
+                    let entries = reg.list();
+                    if entries.is_empty() {
+                        println!("(no plugins installed)");
+                    } else {
+                        for e in entries {
+                            println!("{} v{} (vendor: {})", e.manifest.name, e.manifest.version, e.manifest.vendor);
+                        }
+                    }
+                }
+                PluginsCmd::AbiVersion => println!("{ABI_VERSION}"),
+            }
+        }
         Cmd::Serve { bind, insecure_allow_remote } => {
             let cfg = PbConfig::load(&config_path).unwrap_or_default();
             let bridge = open_bridge(&cfg).await?;
