@@ -1,0 +1,30 @@
+[package]
+name = "pagebridge-timetravel"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Time-travel queries for pagebridge: answer a question against any historical corpus state"
+
+[dependencies]
+pagebridge-core.workspace = true
+pagebridge-audit.workspace = true
+pagebridge-deterministic.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+tokio = { workspace = true, features = ["sync", "macros", "rt", "fs"] }
+sha2.workspace = true
+hex.workspace = true
+parking_lot.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tempfile.workspace = true
+
+[lints]
+workspace = true

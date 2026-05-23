@@ -24,6 +24,7 @@ members = [
     "crates/pagebridge-audit",
     "crates/pagebridge-receipt",
     "crates/pagebridge-deterministic",
+    "crates/pagebridge-timetravel",
     "crates/pagebridge",
     "crates/pagebridge-py",
     "crates/pagebridge-cli",
@@ -145,6 +146,7 @@ pagebridge-plugin-abi = { path = "crates/pagebridge-plugin-abi", version = "1.1.
 pagebridge-audit = { path = "crates/pagebridge-audit", version = "1.1.0" }
 pagebridge-receipt = { path = "crates/pagebridge-receipt", version = "1.1.0" }
 pagebridge-deterministic = { path = "crates/pagebridge-deterministic", version = "1.1.0" }
+pagebridge-timetravel = { path = "crates/pagebridge-timetravel", version = "1.1.0" }
 pagebridge = { path = "crates/pagebridge", version = "1.1.0" }
 
 [workspace.lints.clippy]
