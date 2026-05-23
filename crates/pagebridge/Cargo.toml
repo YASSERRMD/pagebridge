@@ -26,6 +26,7 @@ pagebridge-admin = { workspace = true, optional = true }
 pagebridge-mcp = { workspace = true, optional = true }
 pagebridge-obs = { workspace = true, optional = true }
 pagebridge-auth = { workspace = true, optional = true }
+pagebridge-vision = { workspace = true, optional = true }
 
 [features]
 default = ["sqlite", "embedded", "jsonfile", "ollama", "openai"]
@@ -47,9 +48,10 @@ admin = ["dep:pagebridge-admin"]
 mcp = ["dep:pagebridge-mcp"]
 obs = ["dep:pagebridge-obs"]
 auth = ["dep:pagebridge-auth"]
+vision = ["dep:pagebridge-vision"]
 all-adapters = ["postgres", "sqlite", "mongodb", "embedded", "jsonfile", "mysql", "mssql", "oracle"]
 all-llms = ["ollama", "openai", "anthropic", "llamacpp"]
-full = ["all-adapters", "all-llms", "admin", "mcp", "obs", "auth"]
+full = ["all-adapters", "all-llms", "admin", "mcp", "obs", "auth", "vision"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
