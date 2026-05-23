@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pagebridge admin</title>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }</style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div x-data="adminApp()" x-init="init()" class="max-w-6xl mx-auto p-6 space-y-6">
+  <header class="flex items-center justify-between">
+    <h1 class="text-2xl font-semibold">pagebridge admin</h1>
+    <nav class="space-x-3 text-sm">
+      <button class="hover:underline" :class="tab==='dashboard' && 'font-semibold'" @click="tab='dashboard'">Dashboard</button>
+      <button class="hover:underline" :class="tab==='docs' && 'font-semibold'" @click="tab='docs'">Documents</button>
+      <button class="hover:underline" :class="tab==='ask' && 'font-semibold'" @click="tab='ask'">Ask</button>
+    </nav>
+  </header>
+
+  <section x-show="tab==='dashboard'" class="grid grid-cols-2 gap-4">
+    <div class="rounded-lg bg-white p-4 shadow">
+      <div class="text-xs uppercase text-slate-500">Adapter</div>
+      <div class="text-lg" x-text="stats.adapter_name || '...'"></div>
+    </div>
+    <div class="rounded-lg bg-white p-4 shadow">
+      <div class="text-xs uppercase text-slate-500">LLM</div>
+      <div class="text-lg" x-text="(stats.llm_name || '') + ' / ' + (stats.llm_model || '')"></div>
+    </div>
+    <div class="rounded-lg bg-white p-4 shadow">
+      <div class="text-xs uppercase text-slate-500">Nodes</div>
+      <div class="text-lg" x-text="stats.adapter?.node_count ?? '...'"></div>
+    </div>
+    <div class="rounded-lg bg-white p-4 shadow">
+      <div class="text-xs uppercase text-slate-500">Documents</div>
+      <div class="text-lg" x-text="stats.adapter?.document_count ?? '...'"></div>
+    </div>
+  </section>
+
+  <section x-show="tab==='docs'" class="bg-white rounded-lg shadow">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-100 text-left"><tr>
+        <th class="p-2">doc id</th><th class="p-2">title</th><th class="p-2">leaves</th><th></th>
+      </tr></thead>
+      <tbody>
+        <template x-for="d in docs" :key="d.doc_id">
+          <tr class="border-t">
+            <td class="p-2 font-mono text-xs" x-text="d.doc_id"></td>
+            <td class="p-2" x-text="d.title"></td>
+            <td class="p-2" x-text="d.leaf_count"></td>
+            <td class="p-2 text-right">
+              <button class="text-xs text-red-600 hover:underline" @click="removeDoc(d.doc_id)">remove</button>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+
+  <section x-show="tab==='ask'" class="space-y-3">
+    <div class="bg-white rounded-lg shadow p-4 space-y-2">
+      <textarea class="w-full border rounded p-2" rows="3" placeholder="Ask a question..." x-model="question"></textarea>
+      <div class="flex gap-2">
+        <button class="px-3 py-1 bg-slate-900 text-white rounded" @click="ask()">Ask</button>
+        <button class="px-3 py-1 border rounded" @click="askStream()">Ask (streaming)</button>
+      </div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 whitespace-pre-wrap" x-text="answer"></div>
+    <ul class="text-xs text-slate-600 space-y-1">
+      <template x-for="(c, i) in citations" :key="i">
+        <li>[<span x-text="i+1"></span>] <span x-text="c.doc_title"></span> / <span x-text="c.section_title"></span></li>
+      </template>
+    </ul>
+  </section>
+</div>
+
+<script>
+function adminApp() {
+  return {
+    tab: 'dashboard',
+    stats: {},
+    docs: [],
+    question: '',
+    answer: '',
+    citations: [],
+    async init() {
+      this.stats = await fetch('/api/stats').then(r => r.json());
+      this.docs = await fetch('/api/documents').then(r => r.json());
+    },
+    async ask() {
+      this.answer = ''; this.citations = [];
+      const res = await fetch('/api/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question: this.question }) });
+      const body = await res.json();
+      this.answer = body.text || '';
+      this.citations = body.citations || [];
+    },
+    async askStream() {
+      this.answer = ''; this.citations = [];
+      const res = await fetch('/api/ask/stream', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question: this.question }) });
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nl;
+        while ((nl = buf.indexOf('\n')) !== -1) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line) continue;
+          try {
+            const evt = JSON.parse(line);
+            if (evt.kind === 'token') this.answer += evt.text;
+            else if (evt.kind === 'citation') this.citations.push(evt.citation);
+          } catch (_) {}
+        }
+      }
+    },
+    async removeDoc(id) {
+      await fetch('/api/documents/' + encodeURIComponent(id), { method: 'DELETE' });
+      this.docs = await fetch('/api/documents').then(r => r.json());
+    }
+  };
+}
+</script>
+</body>
+</html>
