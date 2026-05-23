@@ -3822,6 +3822,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-hybrid"
+version = "1.8.0"
+dependencies = [
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-injection"
 version = "1.8.0"
 dependencies = [

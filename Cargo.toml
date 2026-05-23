@@ -65,6 +65,7 @@ members = [
     "crates/pagebridge-budget",
     "crates/pagebridge-causal",
     "crates/pagebridge-shadow",
+    "crates/pagebridge-hybrid",
     "crates/pagebridge",
     "crates/pagebridge-py",
     "crates/pagebridge-cli",
@@ -227,6 +228,7 @@ pagebridge-federation = { path = "crates/pagebridge-federation", version = "1.8.
 pagebridge-budget = { path = "crates/pagebridge-budget", version = "1.8.0" }
 pagebridge-causal = { path = "crates/pagebridge-causal", version = "1.8.0" }
 pagebridge-shadow = { path = "crates/pagebridge-shadow", version = "1.8.0" }
+pagebridge-hybrid = { path = "crates/pagebridge-hybrid", version = "1.8.0" }
 pagebridge = { path = "crates/pagebridge", version = "1.8.0" }
 
 [workspace.lints.clippy]
