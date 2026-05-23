@@ -2492,6 +2492,7 @@ dependencies = [
  "pagebridge-adapter-embedded",
  "pagebridge-adapter-jsonfile",
  "pagebridge-adapter-mongodb",
+ "pagebridge-adapter-mysql",
  "pagebridge-adapter-postgres",
  "pagebridge-adapter-sqlite",
  "pagebridge-core",
