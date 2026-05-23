@@ -43,6 +43,8 @@ pub use pagebridge_obs as obs;
 pub use pagebridge_auth as auth;
 #[cfg(feature = "vision")]
 pub use pagebridge_vision as vision;
+#[cfg(feature = "links")]
+pub use pagebridge_links as links;
 #[cfg(feature = "anthropic")]
 pub use pagebridge_llm_anthropic::AnthropicProvider;
 #[cfg(feature = "llamacpp")]
