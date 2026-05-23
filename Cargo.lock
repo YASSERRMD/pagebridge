@@ -2917,6 +2917,7 @@ dependencies = [
  "pagebridge-llm-llamacpp",
  "pagebridge-llm-ollama",
  "pagebridge-llm-openai",
+ "pagebridge-mcp",
  "serde_json",
  "tokio",
 ]
@@ -3156,6 +3157,20 @@ dependencies = [
  "tokio",
  "tracing",
  "wiremock",
+]
+
+[[package]]
+name = "pagebridge-mcp"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower",
+ "tracing",
 ]
 
 [[package]]
