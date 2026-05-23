@@ -1,0 +1,27 @@
+# Legal pagebridge template — case-law citations, conservative abstention.
+
+[storage]
+adapter = "postgres"
+url = "postgres://pagebridge@localhost/pagebridge_legal"
+
+[llm]
+provider = "anthropic"
+model = "claude-opus-4-7"
+
+[audit]
+enabled = true
+sinks = ["file", "worm"]
+
+[sensitivity]
+default_label = "confidential"
+
+[deterministic]
+enabled = true
+
+[synthesis]
+require_citation = true
+abstain_below_confidence = 0.55
+
+[ingest]
+chunker = "legal-paragraph"
+case_citation_extractor = true

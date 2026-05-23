@@ -1,0 +1,31 @@
+# Finance pagebridge template — SOX-aligned audit, citation enforcement.
+
+[storage]
+adapter = "postgres"
+url = "postgres://pagebridge@localhost/pagebridge_fin"
+
+[llm]
+provider = "anthropic"
+model = "claude-sonnet-4-6"
+
+[audit]
+enabled = true
+sinks = ["file", "worm"]
+required = true
+
+[sensitivity]
+default_label = "confidential"
+
+[deterministic]
+enabled = true
+
+[synthesis]
+# Refuse to answer when no citation can be produced.
+require_citation = true
+
+[budget]
+monthly_cap_usd = 10000.0
+per_question_cap_usd = 0.20
+
+[ingest]
+chunker = "financial-paragraph"

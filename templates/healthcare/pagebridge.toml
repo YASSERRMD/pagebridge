@@ -1,0 +1,33 @@
+# Healthcare pagebridge template
+#
+# PHI auto-detection on, audit required, HIPAA-BAA LLM providers only
+# (no OpenAI by default).
+
+[storage]
+adapter = "postgres"
+url = "postgres://pagebridge@localhost/pagebridge_phi"
+
+[llm]
+# Set provider to one with a signed BAA in production.
+provider = "bedrock"
+model = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+region = "us-east-1"
+
+[audit]
+enabled = true
+sinks = ["file", "worm", "splunk"]
+required = true
+
+[sensitivity]
+default_label = "phi"
+auto_classify = true
+allow_phi_for_roles = ["clinician", "researcher"]
+
+[deterministic]
+enabled = true
+
+[budget]
+monthly_cap_usd = 5000.0
+per_question_cap_usd = 0.10
+alert_at_pct = 70
+hard_stop_at_pct = 95
