@@ -3708,6 +3708,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-causal"
+version = "1.7.0"
+dependencies = [
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-cli"
 version = "1.7.0"
 dependencies = [
