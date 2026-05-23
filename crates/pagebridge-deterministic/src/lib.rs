@@ -15,9 +15,11 @@
 pub mod adapter_canonical;
 pub mod config;
 pub mod error;
+pub mod llm_contract;
 pub mod snapshot;
 
 pub use adapter_canonical::{order_by_for, tiebreaker_for};
 pub use config::{DeterministicMode, QueryOrder};
 pub use error::{DeterministicError, Result};
+pub use llm_contract::DeterminismContract;
 pub use snapshot::{compute_snapshot_id, CorpusSnapshot, SnapshotEntry};
