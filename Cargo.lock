@@ -3497,7 +3497,12 @@ dependencies = [
 name = "pagebridge-llm-bedrock"
 version = "1.2.0"
 dependencies = [
+ "async-trait",
  "pagebridge-core",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
