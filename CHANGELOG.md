@@ -4,6 +4,45 @@ All notable changes to pagebridge land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [SemVer](https://semver.org/).
 
+## [1.2.0] - 2026-05-23
+
+The "Reproducibility + Determinism" release. Pagebridge becomes the
+first retrieval library that can produce bit-identical answers across
+runs and answer questions against any historical corpus state.
+
+### Added
+
+- New crate `pagebridge-deterministic`:
+  - `DeterministicMode` master switch with LLM seed, T=0/top_p=1
+    pinning, adapter query-order pin, prompt-version pin, navigation
+    policy pin, and optional snapshot id requirement.
+  - `QueryOrder` enum (`ByPrimaryKey`, `ByContentHash`, `ByNodeId`)
+    with `order_by_for` / `tiebreaker_for` canonical SQL fragments
+    every adapter bolts onto its queries.
+  - `CorpusSnapshot` + `compute_snapshot_id` content-addressed
+    identifier; sorted leaves so reordered entries hash identically.
+  - `DeterminismContract` LLM-provider self-report (seed support,
+    zero-T support, top_p=1 support, caveats).
+- New crate `pagebridge-timetravel`:
+  - `SnapshotPolicy` cadence config (every N events or N seconds,
+    retain N snapshots).
+  - `SnapshotStore` trait + `FileSnapshotStore` and
+    `MemorySnapshotStore` implementations.
+  - `Overlay` backward-replay engine with `MutationEvent`
+    (Insert/Update/Delete) semantics.
+  - `MutationSource` trait + `snapshot_at(ts)` reconstructor that
+    picks the nearest stored snapshot and forward-replays the audit
+    log up to the requested timestamp.
+- `PagebridgeOptions::with_deterministic_mode` and
+  `PagebridgeOptions::with_snapshot` opt-in switches.
+- CLI: `pagebridge ask --deterministic --snapshot <id> --at <RFC3339>`
+  flags (mode + snapshot pin + time-travel timestamp).
+
+### Backward compatibility
+
+Fully backward compatible with 1.1.x. Default behaviour is non-pinned
+and not time-travelling; opting in is per-call or per-options.
+
 ## [1.1.0] - 2026-05-23
 
 The "Compliance + Provenance" release. Closes the single biggest gap
