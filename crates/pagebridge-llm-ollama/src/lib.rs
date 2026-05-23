@@ -17,9 +17,11 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
+use futures::StreamExt;
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::llm::{
-    CompletionRequest, CompletionResponse, FinishReason, LlmConfig, LlmProvider,
+    CompletionRequest, CompletionResponse, CompletionStream, FinishReason, LlmConfig, LlmProvider,
+    StreamChunk,
 };
 use serde::{Deserialize, Serialize};
 
@@ -170,8 +172,12 @@ impl LlmProvider for OllamaProvider {
         Ok(v)
     }
 
+    async fn complete_stream(&self, req: CompletionRequest) -> Result<CompletionStream> {
+        do_chat_stream(self, req).await
+    }
+
     fn supports_streaming(&self) -> bool {
-        false
+        true
     }
     fn supports_grammar(&self) -> bool {
         false
@@ -256,4 +262,113 @@ async fn do_chat(
         ))
         .await;
     }
+}
+
+#[derive(Deserialize)]
+struct OllamaStreamChunk {
+    #[serde(default)]
+    message: Option<OllamaStreamMsg>,
+    #[serde(default)]
+    done: bool,
+    #[serde(default)]
+    prompt_eval_count: Option<u32>,
+    #[serde(default)]
+    eval_count: Option<u32>,
+}
+
+#[derive(Deserialize)]
+struct OllamaStreamMsg {
+    #[serde(default)]
+    content: String,
+}
+
+async fn do_chat_stream(me: &OllamaProvider, req: CompletionRequest) -> Result<CompletionStream> {
+    let mut messages: Vec<OllamaMsg> = Vec::with_capacity(req.messages.len() + 1);
+    if let Some(sys) = &req.system {
+        messages.push(OllamaMsg {
+            role: "system",
+            content: sys,
+        });
+    }
+    for m in &req.messages {
+        let role = match m.role {
+            pagebridge_core::llm::ChatRole::System => "system",
+            pagebridge_core::llm::ChatRole::User => "user",
+            pagebridge_core::llm::ChatRole::Assistant => "assistant",
+        };
+        messages.push(OllamaMsg {
+            role,
+            content: &m.content,
+        });
+    }
+    let body = OllamaChatReq {
+        model: &me.model,
+        messages,
+        stream: true,
+        format: None,
+        options: OllamaOptions {
+            temperature: req.temperature.or(Some(me.config.default_temperature)),
+            num_predict: req.max_tokens.or(Some(me.config.default_max_tokens)),
+            stop: req.stop.clone(),
+        },
+    };
+    let url = format!("{}/api/chat", me.base_url);
+    let resp = me
+        .client
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| me.err("stream send", e))?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(me.err(&format!("stream status {status}"), body));
+    }
+    let bytes = resp.bytes_stream();
+    let provider_name = "ollama";
+    let mapped = async_stream::try_stream! {
+        let mut buf: Vec<u8> = Vec::new();
+        let mut bs = bytes;
+        let mut prompt_tokens = 0u32;
+        let mut eval_tokens = 0u32;
+        let mut done_seen = false;
+        while let Some(item) = bs.next().await {
+            let chunk = item.map_err(|e| PagebridgeError::Llm {
+                provider: provider_name.into(),
+                message: format!("read chunk: {e}"),
+            })?;
+            buf.extend_from_slice(&chunk);
+            while let Some(nl) = buf.iter().position(|b| *b == b'\n') {
+                let line = buf.drain(..=nl).collect::<Vec<u8>>();
+                let trimmed = std::str::from_utf8(&line).unwrap_or("").trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                let parsed: OllamaStreamChunk = match serde_json::from_str(trimmed) {
+                    Ok(p) => p,
+                    Err(_) => continue,
+                };
+                if let Some(msg) = parsed.message {
+                    if !msg.content.is_empty() {
+                        yield StreamChunk::Token(msg.content);
+                    }
+                }
+                if parsed.done {
+                    prompt_tokens = parsed.prompt_eval_count.unwrap_or(prompt_tokens);
+                    eval_tokens = parsed.eval_count.unwrap_or(eval_tokens);
+                    done_seen = true;
+                }
+            }
+        }
+        if !done_seen {
+            // Server closed without a done frame; still emit the terminal chunk.
+        }
+        yield StreamChunk::Finished {
+            input_tokens: prompt_tokens,
+            output_tokens: eval_tokens,
+            finish_reason: FinishReason::Stop,
+        };
+    };
+    Ok(Box::pin(mapped))
 }
