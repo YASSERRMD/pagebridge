@@ -4020,6 +4020,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-orrf"
+version = "1.9.0"
+dependencies = [
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+]
+
+[[package]]
 name = "pagebridge-plugin-abi"
 version = "1.9.0"
 dependencies = [
