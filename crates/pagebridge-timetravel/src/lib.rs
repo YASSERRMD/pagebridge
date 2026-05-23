@@ -17,9 +17,11 @@
 pub mod error;
 pub mod overlay;
 pub mod policy;
+pub mod reconstruct;
 pub mod store;
 
 pub use error::{TimeTravelError, Result};
-pub use overlay::Overlay;
+pub use overlay::{MutationEvent, Overlay};
 pub use policy::SnapshotPolicy;
-pub use store::{FileSnapshotStore, SnapshotStore};
+pub use reconstruct::{snapshot_at, MutationSource};
+pub use store::{FileSnapshotStore, MemorySnapshotStore, SnapshotStore};
