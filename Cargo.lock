@@ -3568,6 +3568,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-receipt"
+version = "1.0.0"
+dependencies = [
+ "async-trait",
+ "ed25519-dalek",
+ "hex",
+ "pagebridge-audit",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-vision"
 version = "1.0.0"
 dependencies = [
