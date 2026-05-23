@@ -50,6 +50,8 @@ pub use pagebridge_vision as vision;
 pub use pagebridge_links as links;
 #[cfg(feature = "eval")]
 pub use pagebridge_eval as eval;
+#[cfg(feature = "plugin")]
+pub use pagebridge_plugin_abi as plugin;
 #[cfg(feature = "anthropic")]
 pub use pagebridge_llm_anthropic::AnthropicProvider;
 #[cfg(feature = "llamacpp")]
