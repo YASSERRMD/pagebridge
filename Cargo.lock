@@ -3509,7 +3509,13 @@ dependencies = [
 name = "pagebridge-llm-cohere"
 version = "1.2.0"
 dependencies = [
+ "async-trait",
  "pagebridge-core",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -3557,7 +3563,12 @@ dependencies = [
 name = "pagebridge-llm-mlx"
 version = "1.2.0"
 dependencies = [
+ "async-trait",
  "pagebridge-core",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
