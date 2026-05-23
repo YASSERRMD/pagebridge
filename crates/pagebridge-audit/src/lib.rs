@@ -31,6 +31,7 @@ pub mod error;
 pub mod event;
 pub mod merkle;
 pub mod sign;
+pub mod sinks;
 pub mod writer;
 
 pub use error::{AuditError, Result};
