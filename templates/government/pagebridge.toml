@@ -1,0 +1,34 @@
+# Government / Public-Sector pagebridge template
+#
+# Tuned for policy and regulation documents, Arabic-aware tokenization
+# for UAE/MENA deployments, local-only LLM defaults, WORM audit sink.
+
+[storage]
+adapter = "embedded"
+path = "./data/pagebridge.db"
+
+[llm]
+provider = "llamacpp"
+model = "qwen2.5-instruct.gguf"
+
+[audit]
+enabled = true
+sinks = ["file", "worm"]
+worm_path = "./audit/worm"
+
+[deterministic]
+enabled = true
+llm_seed = 1
+llm_temperature_milli = 0
+llm_top_p_milli = 1000
+
+[sensitivity]
+default_label = "internal"
+auto_classify = true
+
+[budget]
+monthly_cap_usd = 0.0   # local-only, no cloud spend
+
+[ingest]
+tokenizer = "snowball-multi-with-arabic"
+chunker = "markdown"
