@@ -1,15 +1,18 @@
 # Storage adapters
 
-`pagebridge` ships with five storage adapters in v0.1. They all implement the
-same `StorageAdapter` trait, so swapping between them is a constructor change.
+`pagebridge` ships with seven storage adapters across v0.1 and v0.2. They all
+implement the same `StorageAdapter` trait, so swapping between them is a
+constructor change.
 
-| Adapter   | Crate                              | Best for                       | BM25 backend          |
-|-----------|------------------------------------|--------------------------------|-----------------------|
-| Embedded  | `pagebridge-adapter-embedded`      | Single-binary apps, edge       | tantivy 0.22 BM25     |
-| SQLite    | `pagebridge-adapter-sqlite`        | Local desktop, single-file ops | FTS5 BM25             |
-| Postgres  | `pagebridge-adapter-postgres`      | Production / multi-writer      | tsvector + ts_rank_cd |
-| MongoDB   | `pagebridge-adapter-mongodb`       | Document-DB shops              | $text + textScore     |
-| JSON file | `pagebridge-adapter-jsonfile`      | Prototyping / migrations       | Substring fallback    |
+| Adapter    | Crate                              | Best for                       | BM25 backend                  |
+|------------|------------------------------------|--------------------------------|-------------------------------|
+| Embedded   | `pagebridge-adapter-embedded`      | Single-binary apps, edge       | tantivy 0.22 BM25             |
+| SQLite     | `pagebridge-adapter-sqlite`        | Local desktop, single-file ops | FTS5 BM25                     |
+| Postgres   | `pagebridge-adapter-postgres`      | Production / multi-writer      | tsvector + ts_rank_cd         |
+| MySQL      | `pagebridge-adapter-mysql`         | LAMP-stack and MariaDB shops   | MATCH AGAINST natural language|
+| MongoDB    | `pagebridge-adapter-mongodb`       | Document-DB shops              | $text + textScore             |
+| SQL Server | `pagebridge-adapter-mssql`         | Enterprise / Windows shops     | Full-Text (LIKE fallback)     |
+| JSON file  | `pagebridge-adapter-jsonfile`      | Prototyping / migrations       | Substring fallback            |
 
 ## Embedded (redb + tantivy)
 
@@ -41,6 +44,46 @@ of title (A), routing_summary (B), summary (C), and keywords (D). A GIN index
 backs `ts_rank_cd` for ranking.
 
 Raw text is chunked into 1 MB BYTEA rows. Summary cache uses BYTEA primary key.
+
+## MySQL / MariaDB
+
+`mysql_async::Pool` with up to 16 concurrent connections. The schema is
+identical in shape to the Postgres adapter but uses native MySQL types:
+`MEDIUMTEXT` for summaries, `JSON` for child id lists and keywords, and a
+`FULLTEXT` index over `(title, routing_summary, summary)`. Search runs through
+`MATCH(...) AGAINST(... IN NATURAL LANGUAGE MODE)`; the natural-language
+relevance score is mapped directly into the public `SearchHit::score`.
+
+Raw text is chunked into 8 MB `MEDIUMBLOB` rows keyed by
+`(doc_id, offset_start)`. Upserts use `INSERT ... ON DUPLICATE KEY UPDATE`.
+
+Compatibility: tested against MariaDB 10/11 in the integration tests; the
+MySQL 8 protocol is also supported via the same connection URL.
+
+## SQL Server
+
+`tiberius` over a `bb8` connection pool, up to 16 connections. The
+adapter accepts either an ADO.NET-style connection string
+(`MSSqlAdapter::from_ado_string`) or a fully-formed `tiberius::Config`
+(`MSSqlAdapter::from_config`).
+
+Schema uses `NVARCHAR(MAX)` for the JSON-encoded child id lists and keyword
+arrays, `BIT` for the leaf flag, `VARBINARY(MAX)` for raw text chunks (4 MB
+default), and `VARBINARY(32)` for both source hashes and summary cache keys.
+`MERGE` powers idempotent upserts.
+
+Full-text search is set up best-effort during `migrate`: if the SQL Server
+instance has the Full-Text Search component installed, a catalog
+`pagebridge_ft` and an index on `pagebridge_nodes` are created. The default
+search path in v0.2 falls back to indexed `LIKE` for portability; full
+`CONTAINSTABLE`-based ranking lands in v0.3 alongside the rest of the
+operational layer.
+
+Operational notes:
+
+- Run with `mssql` Cargo feature: `cargo add pagebridge --features mssql`.
+- Microsoft container licensing requires `ACCEPT_EULA=Y`; the integration
+  test is gated behind `MSSQL_TEST=1` to keep CI runs predictable.
 
 ## MongoDB
 
