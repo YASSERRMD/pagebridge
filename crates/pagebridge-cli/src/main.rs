@@ -26,6 +26,7 @@
     clippy::wildcard_imports
 )]
 
+mod audit;
 mod config;
 
 use std::path::PathBuf;
@@ -167,6 +168,45 @@ enum Cmd {
     },
     /// Health check (storage + LLM).
     Health,
+    /// Tamper-evident audit log operations.
+    #[command(subcommand)]
+    Audit(AuditCmd),
+}
+
+#[derive(Debug, Subcommand)]
+enum AuditCmd {
+    /// Tail recently written events from a local NDJSON file sink.
+    Tail {
+        /// Path to the audit directory written by FileSink.
+        #[arg(long, default_value = ".pagebridge/audit")]
+        dir: PathBuf,
+        /// Workspace to read (default "default").
+        #[arg(long, default_value = "default")]
+        workspace: String,
+        /// Number of trailing events to print.
+        #[arg(long, default_value_t = 50)]
+        n: usize,
+    },
+    /// Verify the hash chain and signatures of an event NDJSON file.
+    Verify {
+        /// Path to the events NDJSON file produced by FileSink.
+        events: PathBuf,
+        /// Path to the public key (raw 32 bytes) matching the writer.
+        #[arg(long)]
+        key: PathBuf,
+        /// Expected key id (must match the events).
+        #[arg(long)]
+        key_id: String,
+    },
+    /// Export events as JSONL to a target file.
+    Export {
+        events: PathBuf,
+        /// Output path.
+        #[arg(long)]
+        to: PathBuf,
+    },
+    /// List configured sinks.
+    Sinks,
 }
 
 #[derive(Debug, Subcommand)]
@@ -494,6 +534,7 @@ async fn main() -> Result<()> {
                 println!("ok {} + {}", h.adapter, h.llm);
             }
         }
+        Cmd::Audit(action) => audit::run(action, cli.json).await?,
     }
     Ok(())
 }

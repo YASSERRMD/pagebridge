@@ -15,6 +15,9 @@ use futures::Stream;
 use tokio::task::JoinHandle;
 
 use crate::adapter::StorageAdapter;
+use crate::audit_hook::{
+    noop as noop_audit_hook, AskAuditFields, AuditHook, DeleteAuditFields, IngestAuditFields,
+};
 use crate::error::{PagebridgeError, Result};
 use crate::id::DocId;
 use crate::ingest::ingest as do_ingest;
@@ -27,6 +30,7 @@ use crate::types::{
     NavigationConfig, PagebridgeStats, SearchHit, SourceKind, TraceStorageMode, UpdateParams,
     UpdateReport,
 };
+use crate::workspace::WorkspaceId;
 
 /// Bundle of configuration knobs for the `Pagebridge` facade.
 pub struct PagebridgeOptions {
@@ -35,6 +39,9 @@ pub struct PagebridgeOptions {
     pub navigation: NavigationConfig,
     pub trace_storage: Option<TraceStorageMode>,
     pub summary_model_fingerprint: Option<String>,
+    pub audit_hook: Option<Arc<dyn AuditHook>>,
+    pub workspace_id: Option<WorkspaceId>,
+    pub adapter_name: Option<String>,
 }
 
 impl PagebridgeOptions {
@@ -47,7 +54,31 @@ impl PagebridgeOptions {
             navigation: NavigationConfig::default(),
             trace_storage: None,
             summary_model_fingerprint: None,
+            audit_hook: None,
+            workspace_id: None,
+            adapter_name: None,
         }
+    }
+
+    /// Attach an audit hook so every public-API call emits an audit event.
+    #[must_use]
+    pub fn with_audit_hook(mut self, hook: Arc<dyn AuditHook>) -> Self {
+        self.audit_hook = Some(hook);
+        self
+    }
+
+    /// Tag every audit event with this workspace id (defaults to "default").
+    #[must_use]
+    pub fn with_workspace(mut self, ws: WorkspaceId) -> Self {
+        self.workspace_id = Some(ws);
+        self
+    }
+
+    /// Tag every audit event with this adapter name (defaults to "unknown").
+    #[must_use]
+    pub fn with_adapter_name(mut self, name: impl Into<String>) -> Self {
+        self.adapter_name = Some(name.into());
+        self
     }
 }
 
@@ -57,6 +88,9 @@ pub(crate) struct PagebridgeInner {
     pub prompts: Arc<PromptLibrary>,
     pub nav_config: NavigationConfig,
     pub ingest_workers: DashMap<DocId, JoinHandle<Result<()>>>,
+    pub audit: Arc<dyn AuditHook>,
+    pub workspace_id: WorkspaceId,
+    pub adapter_name: String,
 }
 
 /// The cognitive retrieval appliance. Cheap to clone via `Arc`.
@@ -80,6 +114,9 @@ impl Pagebridge {
             prompts: Arc::new(PromptLibrary::v1()),
             nav_config: opts.navigation,
             ingest_workers: DashMap::new(),
+            audit: opts.audit_hook.unwrap_or_else(noop_audit_hook),
+            workspace_id: opts.workspace_id.unwrap_or_default(),
+            adapter_name: opts.adapter_name.unwrap_or_else(|| "unknown".to_string()),
         };
         Ok(Self {
             inner: Arc::new(inner),
@@ -89,17 +126,36 @@ impl Pagebridge {
     /// Ingest a document, returning a handle as soon as the structural insert
     /// completes. Summary work runs in a background task.
     pub async fn ingest_document(&self, params: IngestParams) -> Result<DocumentHandle> {
-        let (handle, join) = do_ingest(
+        let started = std::time::Instant::now();
+        let result = do_ingest(
             Arc::clone(&self.inner.storage),
             Arc::clone(&self.inner.llm),
             Arc::clone(&self.inner.prompts),
             params,
         )
-        .await?;
-        self.inner
-            .ingest_workers
-            .insert(handle.doc_id.clone(), join);
-        Ok(handle)
+        .await;
+        let latency_ms = u32::try_from(started.elapsed().as_millis()).unwrap_or(u32::MAX);
+        match result {
+            Ok((handle, join)) => {
+                self.inner
+                    .ingest_workers
+                    .insert(handle.doc_id.clone(), join);
+                self.inner
+                    .audit
+                    .on_ingest(IngestAuditFields {
+                        workspace_id: self.inner.workspace_id.clone(),
+                        adapter: self.inner.adapter_name.clone(),
+                        doc_id: handle.doc_id.clone(),
+                        byte_count: handle.byte_count,
+                        leaf_count: handle.leaf_count,
+                        latency_ms,
+                        success: true,
+                    })
+                    .await;
+                Ok(handle)
+            }
+            Err(e) => Err(e),
+        }
     }
 
     /// Update an existing document in place.
@@ -252,8 +308,10 @@ impl Pagebridge {
     }
 
     async fn ask_inner(&self, question: &str, doc_filter: Option<&DocId>) -> Result<Answer> {
+        use sha2::{Digest, Sha256};
+        let started = std::time::Instant::now();
         let mut trace = TraceBuilder::new(question);
-        let outcome = navigate(
+        let nav_result = navigate(
             &self.inner.storage,
             &self.inner.llm,
             &self.inner.prompts,
@@ -262,8 +320,15 @@ impl Pagebridge {
             doc_filter,
             &mut trace,
         )
-        .await?;
-        let mut answer = synthesize_answer(
+        .await;
+        let outcome = match nav_result {
+            Ok(o) => o,
+            Err(e) => {
+                self.emit_ask_audit(question, started, &e, None, None, 0, 0).await;
+                return Err(e);
+            }
+        };
+        let synth_result = synthesize_answer(
             &self.inner.storage,
             &self.inner.llm,
             &self.inner.prompts,
@@ -271,10 +336,64 @@ impl Pagebridge {
             outcome.selected_leaves,
             &mut trace,
         )
-        .await?;
+        .await;
+        let mut answer = match synth_result {
+            Ok(a) => a,
+            Err(e) => {
+                self.emit_ask_audit(question, started, &e, None, None, 0, 0).await;
+                return Err(e);
+            }
+        };
         trace.finish();
         answer.trace = trace.clone_data();
+        let _ = Sha256::new(); // (linker hint when sha2 stays only used here)
+        let latency_ms = u32::try_from(started.elapsed().as_millis()).unwrap_or(u32::MAX);
+        let qhash = sha256_hex(question.as_bytes());
+        self.inner
+            .audit
+            .on_ask(AskAuditFields {
+                workspace_id: self.inner.workspace_id.clone(),
+                adapter: self.inner.adapter_name.clone(),
+                question_hash: qhash,
+                llm_provider: None,
+                llm_model: None,
+                input_tokens: 0,
+                output_tokens: 0,
+                latency_ms,
+                success: true,
+                failure_kind: None,
+            })
+            .await;
         Ok(answer)
+    }
+
+    async fn emit_ask_audit(
+        &self,
+        question: &str,
+        started: std::time::Instant,
+        err: &PagebridgeError,
+        provider: Option<String>,
+        model: Option<String>,
+        input_tokens: u32,
+        output_tokens: u32,
+    ) {
+        let qhash = sha256_hex(question.as_bytes());
+        let latency_ms = u32::try_from(started.elapsed().as_millis()).unwrap_or(u32::MAX);
+        self.inner
+            .audit
+            .on_ask(AskAuditFields {
+                workspace_id: self.inner.workspace_id.clone(),
+                adapter: self.inner.adapter_name.clone(),
+                question_hash: qhash,
+                llm_provider: provider,
+                llm_model: model,
+                input_tokens,
+                output_tokens,
+                latency_ms,
+                success: false,
+                failure_kind: Some(format!("{err:?}").chars().take(64).collect()),
+            })
+            .await;
     }
 
     /// Run BM25 search without LLM navigation.
@@ -320,7 +439,17 @@ impl Pagebridge {
 
     /// Remove a document and all its nodes from storage.
     pub async fn remove_document(&self, doc_id: &DocId) -> Result<()> {
-        self.inner.storage.delete_document(doc_id).await
+        let result = self.inner.storage.delete_document(doc_id).await;
+        self.inner
+            .audit
+            .on_delete(DeleteAuditFields {
+                workspace_id: self.inner.workspace_id.clone(),
+                adapter: self.inner.adapter_name.clone(),
+                doc_id: doc_id.clone(),
+                success: result.is_ok(),
+            })
+            .await;
+        result
     }
 
     /// Access the prompt library (for advanced customization).
@@ -340,6 +469,13 @@ impl Pagebridge {
     pub fn llm(&self) -> Arc<dyn LlmProvider> {
         Arc::clone(&self.inner.llm)
     }
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut h = Sha256::new();
+    h.update(bytes);
+    hex::encode(h.finalize())
 }
 
 fn parse_source_kind(s: &str) -> SourceKind {
