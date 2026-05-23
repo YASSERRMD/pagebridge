@@ -3605,6 +3605,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-timetravel"
+version = "1.1.0"
+dependencies = [
+ "async-trait",
+ "hex",
+ "pagebridge-audit",
+ "pagebridge-core",
+ "pagebridge-deterministic",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-vision"
 version = "1.1.0"
 dependencies = [
