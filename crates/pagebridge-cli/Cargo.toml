@@ -15,6 +15,7 @@ path = "src/main.rs"
 [dependencies]
 pagebridge-core.workspace = true
 pagebridge = { workspace = true, features = ["full"] }
+pagebridge-auth.workspace = true
 clap.workspace = true
 tokio.workspace = true
 anyhow.workspace = true
