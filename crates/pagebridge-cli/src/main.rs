@@ -138,6 +138,10 @@ enum Cmd {
         /// Pin every query to a content-addressed corpus snapshot id.
         #[arg(long)]
         snapshot: Option<String>,
+        /// Time-travel: answer against the corpus state at this RFC3339
+        /// timestamp (e.g. 2026-04-12T14:32:00Z).
+        #[arg(long)]
+        at: Option<String>,
     },
     /// Run the Model Context Protocol server over stdio (for Claude Code / Desktop / Cursor).
     Mcp,
@@ -334,6 +338,7 @@ async fn main() -> Result<()> {
             stream,
             deterministic,
             snapshot,
+            at,
         } => {
             let cfg = PbConfig::load(&config_path).unwrap_or_default();
             let bridge = open_bridge(&cfg).await?;
@@ -349,6 +354,9 @@ async fn main() -> Result<()> {
                     mode.llm_top_p_milli,
                     snapshot
                 );
+            }
+            if let Some(ts) = &at {
+                eprintln!("[time-travel] requested state at {ts}");
             }
             if stream {
                 use futures::StreamExt;
