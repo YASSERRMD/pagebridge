@@ -16,6 +16,7 @@ members = [
     "crates/pagebridge-admin",
     "crates/pagebridge-mcp",
     "crates/pagebridge-obs",
+    "crates/pagebridge-auth",
     "crates/pagebridge",
     "crates/pagebridge-py",
     "crates/pagebridge-cli",
@@ -94,6 +95,9 @@ axum = { version = "0.7", features = ["macros", "ws", "multipart"] }
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"] }
 prometheus = { version = "0.13", default-features = false }
+biscuit-auth = { version = "6.0", features = ["datalog-macro"] }
+zeroize = { version = "1.8", features = ["derive"] }
+hex = "0.4"
 
 # PDF
 pdf-extract = "0.7"
@@ -124,6 +128,7 @@ pagebridge-llm-llamacpp = { path = "crates/pagebridge-llm-llamacpp", version = "
 pagebridge-admin = { path = "crates/pagebridge-admin", version = "0.1.0" }
 pagebridge-mcp = { path = "crates/pagebridge-mcp", version = "0.1.0" }
 pagebridge-obs = { path = "crates/pagebridge-obs", version = "0.1.0" }
+pagebridge-auth = { path = "crates/pagebridge-auth", version = "0.1.0" }
 pagebridge = { path = "crates/pagebridge", version = "0.1.0" }
 
 [workspace.lints.clippy]
