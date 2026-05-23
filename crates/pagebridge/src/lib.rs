@@ -7,11 +7,12 @@
 
 pub use pagebridge_core::version;
 pub use pagebridge_core::{
-    AdapterStats, Answer, ChatMessage, ChatRole, Citation, CompletionRequest, CompletionResponse,
-    DocId, DocumentEntry, DocumentHandle, FinishReason, IngestParams, LlmConfig, LlmProvider,
-    Navigation, NavigationConfig, NodeId, NodeLevel, NodeRecord, NodeSummary, Pagebridge,
-    PagebridgeError, PagebridgeOptions, PagebridgeStats, PromptContext, PromptLibrary, QueryTrace,
-    Result, SearchHit, SourceKind, StorageAdapter, SummaryCacheEntry, TraceStep, TraceStorageMode,
+    AdapterStats, Answer, AnswerChunk, ChatMessage, ChatRole, Citation, CompletionRequest,
+    CompletionResponse, CompletionStream, DocId, DocumentEntry, DocumentHandle, FinishReason,
+    IngestParams, LlmConfig, LlmProvider, Navigation, NavigationConfig, NodeId, NodeLevel,
+    NodeRecord, NodeSummary, Pagebridge, PagebridgeError, PagebridgeOptions, PagebridgeStats,
+    PromptContext, PromptLibrary, QueryTrace, Result, SearchHit, SourceKind, StorageAdapter,
+    StreamChunk, SummaryCacheEntry, TraceStep, TraceStorageMode,
 };
 
 #[cfg(feature = "embedded")]
