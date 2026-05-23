@@ -18,6 +18,7 @@ pagebridge = { workspace = true, features = ["full"] }
 pagebridge-auth.workspace = true
 pagebridge-audit.workspace = true
 pagebridge-receipt.workspace = true
+pagebridge-deterministic.workspace = true
 ed25519-dalek = { version = "2.1", features = ["pkcs8"] }
 clap.workspace = true
 tokio.workspace = true

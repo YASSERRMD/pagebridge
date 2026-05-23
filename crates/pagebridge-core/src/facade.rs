@@ -44,6 +44,8 @@ pub struct PagebridgeOptions {
     pub receipt_issuer: Option<Arc<dyn ReceiptIssuer>>,
     pub workspace_id: Option<WorkspaceId>,
     pub adapter_name: Option<String>,
+    pub deterministic: Option<serde_json::Value>,
+    pub snapshot_id: Option<String>,
 }
 
 impl PagebridgeOptions {
@@ -60,7 +62,27 @@ impl PagebridgeOptions {
             receipt_issuer: None,
             workspace_id: None,
             adapter_name: None,
+            deterministic: None,
+            snapshot_id: None,
         }
+    }
+
+    /// Switch the facade to deterministic mode. Accepts an opaque
+    /// `serde_json::Value` so this crate does not need to depend on
+    /// pagebridge-deterministic. The value is consulted opportunistically
+    /// by downstream layers (LLM providers, adapters) that honour it.
+    #[must_use]
+    pub fn with_deterministic_mode(mut self, mode: serde_json::Value) -> Self {
+        self.deterministic = Some(mode);
+        self
+    }
+
+    /// Pin every query to a specific corpus snapshot id (computed by
+    /// `pagebridge-deterministic::compute_snapshot_id`).
+    #[must_use]
+    pub fn with_snapshot(mut self, snapshot_id: impl Into<String>) -> Self {
+        self.snapshot_id = Some(snapshot_id.into());
+        self
     }
 
     /// Attach an audit hook so every public-API call emits an audit event.
@@ -102,6 +124,8 @@ pub(crate) struct PagebridgeInner {
     pub receipts: Arc<dyn ReceiptIssuer>,
     pub workspace_id: WorkspaceId,
     pub adapter_name: String,
+    pub deterministic: Option<serde_json::Value>,
+    pub snapshot_id: Option<String>,
 }
 
 /// The cognitive retrieval appliance. Cheap to clone via `Arc`.
@@ -129,6 +153,8 @@ impl Pagebridge {
             receipts: opts.receipt_issuer.unwrap_or_else(noop_receipt_issuer),
             workspace_id: opts.workspace_id.unwrap_or_default(),
             adapter_name: opts.adapter_name.unwrap_or_else(|| "unknown".to_string()),
+            deterministic: opts.deterministic,
+            snapshot_id: opts.snapshot_id,
         };
         Ok(Self {
             inner: Arc::new(inner),
@@ -501,6 +527,19 @@ impl Pagebridge {
     #[must_use]
     pub fn llm(&self) -> Arc<dyn LlmProvider> {
         Arc::clone(&self.inner.llm)
+    }
+
+    /// Return the deterministic-mode config the facade was built with,
+    /// if any. Downstream layers (LLM providers, adapters) consult this.
+    #[must_use]
+    pub fn deterministic_mode(&self) -> Option<&serde_json::Value> {
+        self.inner.deterministic.as_ref()
+    }
+
+    /// Return the pinned snapshot id, if any.
+    #[must_use]
+    pub fn pinned_snapshot(&self) -> Option<&str> {
+        self.inner.snapshot_id.as_deref()
     }
 }
 
