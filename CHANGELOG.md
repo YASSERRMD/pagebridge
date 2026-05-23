@@ -4,6 +4,20 @@ All notable changes to pagebridge land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [SemVer](https://semver.org/).
 
+## [1.7.0] - 2026-05-23
+
+The "Federation + Cost Intelligence" release.
+
+### Added
+
+- New crate `pagebridge-federation`: `FederatedSource` trait, parallel
+  per-source candidate gathering, z-score normalized merge with
+  cross-source `source_id` tagging on every candidate.
+- New crate `pagebridge-budget`: `BudgetConfig` (monthly cap +
+  per-question cap + alert/hard-stop %), `BudgetTracker` pre_admit
+  Allow/Warn/Deny, per-workspace breakdown, naive linear monthly
+  forecast.
+
 ## [1.6.0] - 2026-05-23
 
 The "Adversarial Robustness" release. Pagebridge ships first-class
