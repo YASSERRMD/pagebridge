@@ -10,6 +10,7 @@ description = "Built-in admin HTTP server and SPA for pagebridge"
 
 [dependencies]
 pagebridge-core.workspace = true
+pagebridge-obs.workspace = true
 axum.workspace = true
 tower.workspace = true
 tower-http.workspace = true

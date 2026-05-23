@@ -1,0 +1,19 @@
+[package]
+name = "pagebridge-obs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Observability (Prometheus metrics, tracing spans) for pagebridge"
+
+[dependencies]
+prometheus.workspace = true
+parking_lot.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+
+[lints]
+workspace = true

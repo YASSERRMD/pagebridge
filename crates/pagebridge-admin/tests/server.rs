@@ -66,7 +66,7 @@ async fn admin_serves_index_and_api() {
     assert_eq!(docs.len(), 1);
 
     let index = client
-        .get(base)
+        .get(&base)
         .send()
         .await
         .unwrap()
@@ -74,4 +74,15 @@ async fn admin_serves_index_and_api() {
         .await
         .unwrap();
     assert!(index.contains("pagebridge admin"));
+
+    // /metrics endpoint should be Prometheus-shaped.
+    let metrics = client
+        .get(format!("{base}/metrics"))
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert!(metrics.contains("pagebridge_"));
 }
