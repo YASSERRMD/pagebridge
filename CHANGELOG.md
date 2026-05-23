@@ -4,6 +4,49 @@ All notable changes to pagebridge land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [SemVer](https://semver.org/).
 
+## [2.0.0] - 2026-05-23
+
+The big one. Pagebridge 2.0 ships as the canonical open-source
+vectorless retrieval library. It rolls up every release from 1.1
+through 1.9 and tags the result for distribution.
+
+### Summary of the v1.x to v2.0 journey
+
+- **1.1 Compliance + Provenance**: tamper-evident audit log,
+  verifiable answer receipts, HIPAA/GDPR/SOX mapping.
+- **1.2 Reproducibility + Determinism**: DeterministicMode,
+  CorpusSnapshot, time-travel queries with snapshot_at.
+- **1.3 Unified Provider + Adapter Coverage**: 4 new LLM provider
+  crates + convenience constructors for the OpenAI-compatible
+  family (9 vendors); 22 new database adapter crates.
+- **1.4 Production-Grade Operations**: SloMonitor + burn-rate
+  alarms, continuous groundedness monitoring with DriftDetector,
+  reproducible BuildManifests.
+- **1.5 Multi-Tenant Production**: SensitivityLabel taxonomy +
+  AccessPolicy, TokenBucket rate limits, Drr fair scheduler.
+- **1.6 Adversarial Robustness**: InstructionDetector + content
+  quoting + sandboxed prompt + red-team eval; arc-swap hot reload.
+- **1.7 Federation + Cost Intelligence**: FederatedSource with
+  z-score merge, BudgetTracker with Allow/Warn/Deny.
+- **1.8 Explainability + Causal Analysis**: CausalDag + explain;
+  Counterfactual; ShadowAggregator with Promote/Hold/Revert.
+- **1.9 Edge to Cloud**: ConfidenceEstimator + EscalationPolicy;
+  pagebridge-wasm scaffold for browser deployments.
+
+### Added in 2.0
+
+- Open Retrieval Response Format v1 (`pagebridge-orrf` reference
+  crate + `docs/spec/ORRF-v1.md`).
+- Vertical templates: government, healthcare, finance, legal.
+- 2.0 hardening tracker + migration guide
+  (`docs/v2-prelaunch/`).
+
+### Backward compatibility
+
+2.0 carries no breaking API changes vs 1.x. The version bump signals
+the stability promise: every public surface listed in `SEMVER.md`
+follows strict SemVer from here forward.
+
 ## [1.9.0] - 2026-05-23
 
 The "Edge to Cloud" release.
