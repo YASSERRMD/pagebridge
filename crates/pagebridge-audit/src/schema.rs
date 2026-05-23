@@ -7,7 +7,6 @@
 //! can run during migrations.
 
 /// Postgres DDL for the audit table.
-#[must_use]
 pub const POSTGRES_DDL: &str = r#"
 CREATE TABLE IF NOT EXISTS pagebridge_audit (
     workspace_id   TEXT      NOT NULL,
@@ -47,7 +46,7 @@ CREATE TABLE IF NOT EXISTS pagebridge_audit_batches (
 "#;
 
 /// SQLite DDL for the audit table.
-#[must_use]
+
 pub const SQLITE_DDL: &str = r#"
 CREATE TABLE IF NOT EXISTS pagebridge_audit (
     workspace_id   TEXT      NOT NULL,
@@ -87,7 +86,7 @@ CREATE TABLE IF NOT EXISTS pagebridge_audit_batches (
 "#;
 
 /// MySQL/MariaDB DDL for the audit table.
-#[must_use]
+
 pub const MYSQL_DDL: &str = r#"
 CREATE TABLE IF NOT EXISTS pagebridge_audit (
     workspace_id   VARCHAR(64)  NOT NULL,
@@ -126,7 +125,7 @@ CREATE TABLE IF NOT EXISTS pagebridge_audit_batches (
 "#;
 
 /// SQL Server DDL.
-#[must_use]
+
 pub const MSSQL_DDL: &str = r#"
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = N'pagebridge_audit')
 BEGIN
@@ -156,7 +155,7 @@ END;
 "#;
 
 /// Oracle DDL.
-#[must_use]
+
 pub const ORACLE_DDL: &str = r#"
 BEGIN
 EXECUTE IMMEDIATE '

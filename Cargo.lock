@@ -3421,6 +3421,7 @@ dependencies = [
  "async-trait",
  "dashmap",
  "futures",
+ "hex",
  "parking_lot",
  "pdf-extract",
  "proptest",

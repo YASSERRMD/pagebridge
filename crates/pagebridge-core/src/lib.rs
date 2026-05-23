@@ -6,6 +6,7 @@
 //! depend on this one.
 
 pub mod adapter;
+pub mod audit_hook;
 pub mod citation;
 pub mod error;
 pub mod facade;
@@ -21,6 +22,10 @@ pub mod types;
 pub mod workspace;
 pub mod workspace_handle;
 
+pub use audit_hook::{
+    noop as noop_audit_hook, AskAuditFields, AuditHook, DeleteAuditFields, IngestAuditFields,
+    NoopAuditHook,
+};
 pub use facade::{Pagebridge, PagebridgeOptions};
 
 pub use adapter::StorageAdapter;

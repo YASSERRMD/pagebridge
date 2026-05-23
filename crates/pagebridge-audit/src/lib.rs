@@ -29,6 +29,7 @@
 
 pub mod error;
 pub mod event;
+pub mod facade_hook;
 pub mod merkle;
 pub mod sign;
 pub mod schema;
@@ -41,6 +42,7 @@ pub use error::{AuditError, Result};
 pub use event::{
     AuditAction, AuditEvent, AuditOutcome, AuditResource, PolicyDecision, Principal,
 };
+pub use facade_hook::FacadeAuditHook;
 pub use merkle::{
     merkle_proof, merkle_root, verify_inclusion, InclusionProof, MerkleBatch, ProofNode,
 };
