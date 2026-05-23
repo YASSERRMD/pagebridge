@@ -3767,6 +3767,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagebridge-federation"
+version = "1.6.0"
+dependencies = [
+ "async-trait",
+ "futures",
+ "pagebridge-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "pagebridge-hotreload"
 version = "1.6.0"
 dependencies = [
