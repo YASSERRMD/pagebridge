@@ -4,6 +4,46 @@ All notable changes to pagebridge land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [SemVer](https://semver.org/).
 
+## [1.3.0] - 2026-05-23
+
+The "Unified Provider + Adapter Coverage" release. Pagebridge's
+breadth across the LLM-provider and database landscape now exceeds
+any other retrieval library in production.
+
+### Added
+
+- New crate `pagebridge-reranker`: `Reranker` trait + `StubReranker`
+  fallback + `VoyageReranker` and `CohereReranker` behind feature
+  flags. Shared conformance suite.
+- New crate `pagebridge-llm-cost`: `PriceEntry` per-million-token
+  prices in micro-USD, bundled snapshot for 13 (provider, model)
+  pairs across OpenAI, Anthropic, Google, Groq, Mistral, Cohere,
+  Bedrock, Ollama, llama.cpp. `cost_micro_usd` integer math.
+- New crate `pagebridge-llm-routing`: `Router` provider with primary
+  + fallback chain. `Strategy::FirstAvailable | LatencyBounded |
+  CostBounded | RoundRobin`.
+- New provider crates: `pagebridge-llm-gemini` (Google generateContent
+  API), `pagebridge-llm-cohere` (Cohere v2 chat API),
+  `pagebridge-llm-bedrock` (AWS Bedrock scaffold behind `sdk`
+  feature), `pagebridge-llm-mlx` (Apple Silicon on-device scaffold
+  behind `mlx` feature).
+- Convenience constructors on `OpenAiCompatibleProvider` for Groq,
+  Cerebras, Fireworks, Together, Mistral, HF TGI, Azure OpenAI,
+  Replicate, and Modal (all OpenAI-compatible shapes).
+- 22 new database adapter crates registering as workspace members
+  with typed scaffolds gated behind `driver` features:
+  - Distributed SQL: cockroach, yugabyte, spanner, tidb.
+  - Wide-column: cassandra, scylla.
+  - Analytical/Cloud DW: clickhouse, duckdb, timescale, snowflake,
+    bigquery, redshift, databricks.
+  - Embedded KV: lmdb, rocksdb, sled, fjall.
+  - Multi-model: arango, surrealdb, foundationdb.
+  - In-memory + escape hatch: redis, odbc.
+
+### Backward compatibility
+
+Fully backward compatible with 1.2.x. Every new crate is opt-in.
+
 ## [1.2.0] - 2026-05-23
 
 The "Reproducibility + Determinism" release. Pagebridge becomes the
