@@ -1,0 +1,38 @@
+[package]
+name = "pagebridge-llm-llamacpp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Embedded llama.cpp LLM provider for pagebridge"
+
+[features]
+# The `llama-cpp-2` crate builds llama.cpp from source via a C++ toolchain.
+# Default builds compile to a stub that returns "driver not enabled" so the
+# rest of the workspace stays portable; enable `llamacpp-driver` to link the
+# real backend.
+default = ["cpu"]
+cpu = []
+llamacpp-driver = ["dep:llama-cpp-2"]
+cuda = ["llamacpp-driver", "llama-cpp-2/cuda"]
+metal = ["llamacpp-driver", "llama-cpp-2/metal"]
+vulkan = ["llamacpp-driver", "llama-cpp-2/vulkan"]
+
+[dependencies]
+pagebridge-core.workspace = true
+async-trait.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+parking_lot.workspace = true
+llama-cpp-2 = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tempfile.workspace = true
+
+[lints]
+workspace = true

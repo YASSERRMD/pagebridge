@@ -12,6 +12,7 @@ members = [
     "crates/pagebridge-llm-ollama",
     "crates/pagebridge-llm-openai",
     "crates/pagebridge-llm-anthropic",
+    "crates/pagebridge-llm-llamacpp",
     "crates/pagebridge",
     "crates/pagebridge-py",
     "crates/pagebridge-cli",
@@ -83,6 +84,7 @@ bb8 = "0.8"
 bb8-tiberius = "0.15"
 tokio-util = { version = "0.7", features = ["compat"] }
 oracle = { version = "0.6", default-features = false }
+llama-cpp-2 = { version = "0.1", default-features = false }
 
 # PDF
 pdf-extract = "0.7"
@@ -109,6 +111,7 @@ pagebridge-adapter-oracle = { path = "crates/pagebridge-adapter-oracle", version
 pagebridge-llm-ollama = { path = "crates/pagebridge-llm-ollama", version = "0.1.0" }
 pagebridge-llm-openai = { path = "crates/pagebridge-llm-openai", version = "0.1.0" }
 pagebridge-llm-anthropic = { path = "crates/pagebridge-llm-anthropic", version = "0.1.0" }
+pagebridge-llm-llamacpp = { path = "crates/pagebridge-llm-llamacpp", version = "0.1.0" }
 pagebridge = { path = "crates/pagebridge", version = "0.1.0" }
 
 [workspace.lints.clippy]
