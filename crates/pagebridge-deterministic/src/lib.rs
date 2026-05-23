@@ -12,10 +12,12 @@
 
 #![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
 
+pub mod adapter_canonical;
 pub mod config;
 pub mod error;
 pub mod snapshot;
 
+pub use adapter_canonical::{order_by_for, tiebreaker_for};
 pub use config::{DeterministicMode, QueryOrder};
 pub use error::{DeterministicError, Result};
 pub use snapshot::{compute_snapshot_id, CorpusSnapshot, SnapshotEntry};
