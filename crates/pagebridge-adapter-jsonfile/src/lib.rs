@@ -450,6 +450,20 @@ impl StorageAdapter for JsonFileAdapter {
         Ok(self.summaries.read().get(hash).cloned())
     }
 
+    async fn get_summary_caches_batch(
+        &self,
+        hashes: &[[u8; 32]],
+    ) -> Result<std::collections::HashMap<[u8; 32], SummaryCacheEntry>> {
+        let guard = self.summaries.read();
+        let mut out = std::collections::HashMap::with_capacity(hashes.len());
+        for h in hashes {
+            if let Some(entry) = guard.get(h) {
+                out.insert(*h, entry.clone());
+            }
+        }
+        Ok(out)
+    }
+
     async fn upsert_summary_cache(&self, hash: &[u8; 32], entry: &SummaryCacheEntry) -> Result<()> {
         self.summaries.write().insert(*hash, entry.clone());
         let me = self.clone();
