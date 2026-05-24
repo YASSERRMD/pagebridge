@@ -21,15 +21,18 @@ use crate::audit_hook::{
 };
 use crate::error::{PagebridgeError, Result};
 use crate::id::DocId;
-use crate::ingest::{ingest_with_config as do_ingest, SummaryWorkerConfig};
+use crate::ingest::{
+    ingest_with_config as do_ingest, ingest_with_progress as do_ingest_with_progress,
+    ProgressTracker, SummaryWorkerConfig,
+};
 use crate::llm::LlmProvider;
 use crate::prompts::PromptLibrary;
 use crate::search::{navigate, synthesize_answer, NavigationOutcome};
 use crate::trace::TraceBuilder;
 use crate::types::{
-    Answer, AnswerChunk, DiffMode, DocumentEntry, DocumentHandle, IngestParams, Navigation,
-    NavigationConfig, PagebridgeStats, SearchHit, SourceKind, TraceStorageMode, UpdateParams,
-    UpdateReport,
+    Answer, AnswerChunk, DiffMode, DocumentEntry, DocumentHandle, DocumentIngestHandle,
+    IngestParams, Navigation, NavigationConfig, PagebridgeStats, SearchHit, SourceKind,
+    TraceStorageMode, UpdateParams, UpdateReport,
 };
 use crate::workspace::WorkspaceId;
 
@@ -208,6 +211,61 @@ impl Pagebridge {
                     })
                     .await;
                 Ok(handle)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Ingest a document and return a handle that exposes a live progress
+    /// stream. Unlike `ingest_document`, which detaches the summary work
+    /// into a private background task, this returns a
+    /// [`DocumentIngestHandle`] so the caller can subscribe to a
+    /// [`crate::ingest::ProgressSnapshot`] broadcast (used by the CLI bar
+    /// and recallwell's SSE endpoint) and `await` final completion via
+    /// `handle.wait()`.
+    pub async fn ingest_document_with_progress(
+        &self,
+        params: IngestParams,
+    ) -> Result<DocumentIngestHandle> {
+        let doc_id_hint = params
+            .doc_id
+            .clone()
+            .unwrap_or_else(|| crate::id::DocId::new("pending").expect("static doc id"));
+        let progress = ProgressTracker::new(doc_id_hint);
+        let started = std::time::Instant::now();
+        let result = do_ingest_with_progress(
+            Arc::clone(&self.inner.storage),
+            Arc::clone(&self.inner.llm),
+            Arc::clone(&self.inner.prompts),
+            params,
+            self.inner.summary_worker,
+            Some(Arc::clone(&progress)),
+        )
+        .await;
+        let latency_ms = u32::try_from(started.elapsed().as_millis()).unwrap_or(u32::MAX);
+        match result {
+            Ok((handle, join)) => {
+                self.inner
+                    .audit
+                    .on_ingest(IngestAuditFields {
+                        workspace_id: self.inner.workspace_id.clone(),
+                        adapter: self.inner.adapter_name.clone(),
+                        doc_id: handle.doc_id.clone(),
+                        byte_count: handle.byte_count,
+                        leaf_count: handle.leaf_count,
+                        latency_ms,
+                        success: true,
+                    })
+                    .await;
+                Ok(DocumentIngestHandle {
+                    doc_id: handle.doc_id,
+                    root_node_id: handle.root_node_id,
+                    leaf_count: handle.leaf_count,
+                    byte_count: handle.byte_count,
+                    structural_ingest_ms: handle.structural_ingest_ms,
+                    progress,
+                    join,
+                })
             }
             Err(e) => Err(e),
         }

@@ -86,6 +86,58 @@ pub struct DocumentHandle {
     pub structural_ingest_ms: u64,
 }
 
+/// Lightweight handle returned by [`crate::Pagebridge::ingest_document_with_progress`].
+///
+/// Holds the same identifying fields as [`DocumentHandle`] plus a live
+/// progress channel callers can subscribe to. `.wait()` resolves to the
+/// completed [`DocumentHandle`] once the background summary task drains.
+#[derive(Debug)]
+pub struct DocumentIngestHandle {
+    pub doc_id: DocId,
+    pub root_node_id: NodeId,
+    pub leaf_count: u32,
+    pub byte_count: u64,
+    pub structural_ingest_ms: u64,
+    pub(crate) progress: std::sync::Arc<crate::ingest::ProgressTracker>,
+    pub(crate) join: tokio::task::JoinHandle<crate::error::Result<()>>,
+}
+
+impl DocumentIngestHandle {
+    /// Snapshot of the current progress state.
+    #[must_use]
+    pub fn progress(&self) -> crate::ingest::ProgressSnapshot {
+        self.progress.snapshot()
+    }
+
+    /// Subscribe to a live stream of progress updates. Each subscriber gets
+    /// its own receiver; updates are debounced to ~100ms per snapshot.
+    pub fn subscribe(&self) -> tokio::sync::broadcast::Receiver<crate::ingest::ProgressSnapshot> {
+        self.progress.subscribe()
+    }
+
+    /// Identifier for the in-flight document.
+    #[must_use]
+    pub fn doc_id(&self) -> &DocId {
+        &self.doc_id
+    }
+
+    /// Await full ingest completion. The returned [`DocumentHandle`] is
+    /// equivalent to what the legacy `ingest_document` produced once the
+    /// background summary task finished.
+    pub async fn wait(self) -> crate::error::Result<DocumentHandle> {
+        self.join
+            .await
+            .map_err(|e| crate::error::PagebridgeError::Internal(format!("join: {e}")))??;
+        Ok(DocumentHandle {
+            doc_id: self.doc_id,
+            root_node_id: self.root_node_id,
+            leaf_count: self.leaf_count,
+            byte_count: self.byte_count,
+            structural_ingest_ms: self.structural_ingest_ms,
+        })
+    }
+}
+
 /// Cached summary entry keyed by the sha256 of the source content.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SummaryCacheEntry {
