@@ -50,11 +50,15 @@ async fn t1_t2_t3_history_walk() {
     store.put(&base).await.unwrap();
 
     let muts = Scripted(vec![
-        (150, MutationEvent::Insert(entry("b", "22", 1))),       // t=150 add b
-        (200, MutationEvent::Update(entry("a", "33", 2))),       // t=200 update a
-        (250, MutationEvent::Delete {                              // t=250 delete b
-            node_id: entry("b", "22", 1).node_id,
-        }),
+        (150, MutationEvent::Insert(entry("b", "22", 1))), // t=150 add b
+        (200, MutationEvent::Update(entry("a", "33", 2))), // t=200 update a
+        (
+            250,
+            MutationEvent::Delete {
+                // t=250 delete b
+                node_id: entry("b", "22", 1).node_id,
+            },
+        ),
     ]);
 
     // At t=120: only a:11 (no muts yet after base).
@@ -68,7 +72,11 @@ async fn t1_t2_t3_history_walk() {
 
     // At t=225: a:33 + b:22
     let s225 = snapshot_at(&store, &muts, ws.clone(), 225).await.unwrap();
-    let a = s225.entries.iter().find(|e| e.node_id.as_str().ends_with(":a")).unwrap();
+    let a = s225
+        .entries
+        .iter()
+        .find(|e| e.node_id.as_str().ends_with(":a"))
+        .unwrap();
     assert_eq!(a.content_hash_hex, "33");
     assert_eq!(s225.entries.len(), 2);
 

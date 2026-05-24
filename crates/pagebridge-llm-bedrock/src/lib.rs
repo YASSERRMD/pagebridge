@@ -12,9 +12,7 @@
 use async_trait::async_trait;
 
 use pagebridge_core::error::{PagebridgeError, Result};
-use pagebridge_core::llm::{
-    CompletionRequest, CompletionResponse, FinishReason, LlmProvider,
-};
+use pagebridge_core::llm::{CompletionRequest, CompletionResponse, LlmProvider};
 
 #[derive(Debug, Clone)]
 pub struct BedrockProvider {
@@ -51,7 +49,9 @@ impl LlmProvider for BedrockProvider {
         // consumers get a clear "configure the sdk feature" message.
         Err(PagebridgeError::Llm {
             provider: "bedrock".into(),
-            message: "BedrockProvider requires the `sdk` feature; see pagebridge-llm-bedrock README".into(),
+            message:
+                "BedrockProvider requires the `sdk` feature; see pagebridge-llm-bedrock README"
+                    .into(),
         })
     }
 

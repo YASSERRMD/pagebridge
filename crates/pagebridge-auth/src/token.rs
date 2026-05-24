@@ -50,9 +50,7 @@ pub fn mint(root: &KeyPair, spec: &TokenSpec) -> Result<String> {
             .as_secs()
             .saturating_add(ttl.as_secs());
         let exp_i: i64 = i64::try_from(exp).unwrap_or(i64::MAX);
-        builder = builder
-            .fact(fact!("expires_at({exp_i});"))
-            .map_err(err)?;
+        builder = builder.fact(fact!("expires_at({exp_i});")).map_err(err)?;
     }
     if let Some(note) = &spec.note {
         let n = note.clone();
@@ -91,9 +89,7 @@ pub fn verify(token_str: &str, public: &PublicKey) -> Result<VerifiedToken> {
     let ws_query: Vec<(String,)> = authz
         .query("data($name) <- workspace($name)")
         .map_err(err)?;
-    let exp_query: Vec<(i64,)> = authz
-        .query("data($t) <- expires_at($t)")
-        .map_err(err)?;
+    let exp_query: Vec<(i64,)> = authz.query("data($t) <- expires_at($t)").map_err(err)?;
 
     let mut set = CapabilitySet::new();
     for (name,) in caps_query {

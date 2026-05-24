@@ -8,7 +8,9 @@ use async_trait::async_trait;
 
 use pagebridge_deterministic::CorpusSnapshot;
 
-use crate::error::{Result, TimeTravelError};
+use crate::error::Result;
+#[cfg(test)]
+use crate::error::TimeTravelError;
 
 #[async_trait]
 pub trait SnapshotStore: Send + Sync + 'static {
@@ -101,7 +103,11 @@ impl SnapshotStore for MemorySnapshotStore {
     }
     async fn list_before(&self, ts_ns: u128) -> Result<Vec<CorpusSnapshot>> {
         let g = self.inner.lock();
-        let mut v: Vec<_> = g.iter().filter(|s| s.created_at_ns <= ts_ns).cloned().collect();
+        let mut v: Vec<_> = g
+            .iter()
+            .filter(|s| s.created_at_ns <= ts_ns)
+            .cloned()
+            .collect();
         v.sort_by_key(|s| s.created_at_ns);
         Ok(v)
     }

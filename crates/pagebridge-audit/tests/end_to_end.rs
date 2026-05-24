@@ -8,6 +8,8 @@
 //!    middle event), re-read, re-verify: expect ChainBroken pointing at
 //!    exactly that event.
 
+#![allow(clippy::redundant_clone)]
+
 use std::sync::Arc;
 
 use pagebridge_audit::{
@@ -20,10 +22,7 @@ use pagebridge_core::workspace::WorkspaceId;
 async fn full_pipeline_roundtrip_and_tampering_detection() {
     let dir = tempfile::tempdir().unwrap();
     let secret = SigningSecret::generate();
-    let mut writer = AuditWriter::new(
-        secret.clone(),
-        WriterConfig { batch_size: 1024 },
-    );
+    let mut writer = AuditWriter::new(secret.clone(), WriterConfig { batch_size: 1024 });
     let sink = Arc::new(FileSink::new(dir.path()));
     writer.add_sink(sink.clone());
     let ws = WorkspaceId::new("acme").unwrap();

@@ -36,7 +36,10 @@ impl RootKey {
     pub fn generate() -> Self {
         let keypair = KeyPair::new();
         let public_hex = hex::encode(keypair.public().to_bytes());
-        Self { keypair, public_hex }
+        Self {
+            keypair,
+            public_hex,
+        }
     }
 
     /// Persist the private key to disk in `0o600` JSON form.
@@ -64,11 +67,14 @@ impl RootKey {
         let mut stored: StoredKey = serde_json::from_slice(&bytes).map_err(err)?;
         let priv_bytes = hex::decode(&stored.private_hex).map_err(err)?;
         stored.private_hex.zeroize();
-        let private = PrivateKey::from_bytes(&priv_bytes, biscuit_auth::Algorithm::Ed25519)
-            .map_err(err)?;
+        let private =
+            PrivateKey::from_bytes(&priv_bytes, biscuit_auth::Algorithm::Ed25519).map_err(err)?;
         let keypair = KeyPair::from(&private);
         let public_hex = hex::encode(keypair.public().to_bytes());
-        Ok(Self { keypair, public_hex })
+        Ok(Self {
+            keypair,
+            public_hex,
+        })
     }
 }
 

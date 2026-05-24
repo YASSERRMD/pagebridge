@@ -78,7 +78,10 @@ mod tests {
 
     #[test]
     fn bucket_admits_until_empty() {
-        let b = TokenBucket::new(RateLimit { capacity: 3, refill_per_sec: 1 });
+        let b = TokenBucket::new(RateLimit {
+            capacity: 3,
+            refill_per_sec: 1,
+        });
         for _ in 0..3 {
             assert_eq!(b.try_take(1), LimitDecision::Allow);
         }

@@ -70,11 +70,11 @@ pub(crate) fn err<E: std::fmt::Display>(ctx: &str, e: E) -> PagebridgeError {
 }
 
 #[cfg(feature = "oracle-driver")]
+mod ops;
+#[cfg(feature = "oracle-driver")]
 mod pool;
 #[cfg(feature = "oracle-driver")]
 mod schema;
-#[cfg(feature = "oracle-driver")]
-mod ops;
 
 #[cfg(feature = "oracle-driver")]
 pub use real::OracleAdapter;
@@ -104,11 +104,7 @@ mod real {
 
     impl OracleAdapter {
         /// Connect with explicit credentials.
-        pub async fn connect(
-            username: &str,
-            password: &str,
-            connect_string: &str,
-        ) -> Result<Self> {
+        pub async fn connect(username: &str, password: &str, connect_string: &str) -> Result<Self> {
             let pool = OraclePool::new(username, password, connect_string, 4)?;
             let adapter = Self { pool };
             adapter.ping().await?;
@@ -187,10 +183,7 @@ mod real {
         async fn read_raw_span(&self, doc_id: &DocId, span: (u64, u64)) -> Result<Vec<u8>> {
             crate::ops::read_raw_span(&self.pool, doc_id, span).await
         }
-        async fn get_summary_cache(
-            &self,
-            hash: &[u8; 32],
-        ) -> Result<Option<SummaryCacheEntry>> {
+        async fn get_summary_cache(&self, hash: &[u8; 32]) -> Result<Option<SummaryCacheEntry>> {
             crate::ops::get_summary_cache(&self.pool, hash).await
         }
         async fn upsert_summary_cache(
@@ -234,10 +227,9 @@ mod stub {
     fn driver_disabled() -> PagebridgeError {
         PagebridgeError::Adapter {
             adapter: "oracle".into(),
-            message:
-                "Oracle driver not enabled. Rebuild with --features oracle-driver and ensure \
+            message: "Oracle driver not enabled. Rebuild with --features oracle-driver and ensure \
                  Oracle Instant Client is installed."
-                    .into(),
+                .into(),
         }
     }
 
@@ -296,17 +288,10 @@ mod stub {
         async fn read_raw_span(&self, _d: &DocId, _s: (u64, u64)) -> Result<Vec<u8>> {
             Err(driver_disabled())
         }
-        async fn get_summary_cache(
-            &self,
-            _h: &[u8; 32],
-        ) -> Result<Option<SummaryCacheEntry>> {
+        async fn get_summary_cache(&self, _h: &[u8; 32]) -> Result<Option<SummaryCacheEntry>> {
             Err(driver_disabled())
         }
-        async fn upsert_summary_cache(
-            &self,
-            _h: &[u8; 32],
-            _e: &SummaryCacheEntry,
-        ) -> Result<()> {
+        async fn upsert_summary_cache(&self, _h: &[u8; 32], _e: &SummaryCacheEntry) -> Result<()> {
             Err(driver_disabled())
         }
         async fn stats(&self) -> Result<AdapterStats> {

@@ -34,9 +34,7 @@ pub async fn snapshot_at<S: SnapshotStore, M: MutationSource>(
     ts_ns: u128,
 ) -> Result<CorpusSnapshot> {
     let mut candidates = store.list_before(ts_ns).await?;
-    let base = candidates
-        .pop()
-        .ok_or(TimeTravelError::NoSnapshotBefore)?;
+    let base = candidates.pop().ok_or(TimeTravelError::NoSnapshotBefore)?;
     let events = mutations
         .between(&workspace, base.created_at_ns, ts_ns)
         .await?;
@@ -97,9 +95,16 @@ mod tests {
         ]);
 
         let snap = snapshot_at(&store, &muts, ws, 200).await.unwrap();
-        let a = snap.entries.iter().find(|e| e.node_id.as_str().ends_with(":a")).unwrap();
+        let a = snap
+            .entries
+            .iter()
+            .find(|e| e.node_id.as_str().ends_with(":a"))
+            .unwrap();
         assert_eq!(a.content_hash_hex, "11");
-        assert!(snap.entries.iter().any(|e| e.node_id.as_str().ends_with(":b")));
+        assert!(snap
+            .entries
+            .iter()
+            .any(|e| e.node_id.as_str().ends_with(":b")));
         let _ = Arc::<u32>::default;
     }
 }

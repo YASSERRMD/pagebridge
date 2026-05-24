@@ -13,11 +13,11 @@
 )]
 
 use parking_lot::Mutex;
-use std::sync::LazyLock;
 use prometheus::{
-    Encoder, Gauge, Histogram, HistogramOpts, IntCounter, IntCounterVec, IntGauge, Opts,
-    Registry, TextEncoder,
+    Encoder, Gauge, Histogram, HistogramOpts, IntCounter, IntCounterVec, IntGauge, Opts, Registry,
+    TextEncoder,
 };
+use std::sync::LazyLock;
 
 /// Process-wide metric registry. Use [`registry`] to access it.
 static REGISTRY: LazyLock<Registry> = LazyLock::new(Registry::new);
@@ -140,9 +140,7 @@ pub fn encode_text() -> Result<String, prometheus::Error> {
 /// Convenience: increment an ask counter with the given outcome label.
 pub fn record_ask(outcome: &str, duration_seconds: f64) {
     if let Some(m) = metrics() {
-        m.asks_total
-            .with_label_values(&[outcome])
-            .inc();
+        m.asks_total.with_label_values(&[outcome]).inc();
         m.ask_duration_seconds.observe(duration_seconds);
     }
 }

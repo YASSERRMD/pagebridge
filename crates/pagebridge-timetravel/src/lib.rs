@@ -12,7 +12,13 @@
 //! 3. `ask_at(t)` / `snapshot_at(t)`: facade-level APIs that materialise
 //!    the overlay and run the requested operation against it.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::significant_drop_in_scrutinee,
+    clippy::significant_drop_tightening
+)]
 
 pub mod error;
 pub mod overlay;
@@ -20,7 +26,7 @@ pub mod policy;
 pub mod reconstruct;
 pub mod store;
 
-pub use error::{TimeTravelError, Result};
+pub use error::{Result, TimeTravelError};
 pub use overlay::{MutationEvent, Overlay};
 pub use policy::SnapshotPolicy;
 pub use reconstruct::{snapshot_at, MutationSource};

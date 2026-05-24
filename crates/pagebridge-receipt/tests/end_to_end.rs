@@ -2,6 +2,8 @@
 //! it to JSON, parse it back, run verify_receipt with the matching
 //! public key, and confirm tampering breaks verification.
 
+#![allow(clippy::default_trait_access)]
+
 use std::sync::Arc;
 
 use pagebridge_audit::sign::SigningSecret;

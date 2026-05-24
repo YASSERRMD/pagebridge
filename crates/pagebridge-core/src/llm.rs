@@ -118,8 +118,7 @@ pub enum StreamChunk {
 }
 
 /// Boxed asynchronous stream of completion chunks.
-pub type CompletionStream =
-    Pin<Box<dyn Stream<Item = Result<StreamChunk>> + Send + 'static>>;
+pub type CompletionStream = Pin<Box<dyn Stream<Item = Result<StreamChunk>> + Send + 'static>>;
 
 /// Provider-side knobs (timeouts, retries) shared across all providers.
 #[derive(Debug, Clone, Copy)]

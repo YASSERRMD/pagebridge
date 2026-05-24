@@ -1,6 +1,30 @@
 //! Verifies the skip-on-equivalent re-ingest fast path.
 
-#![allow(clippy::cast_possible_truncation)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_lossless,
+    clippy::missing_const_for_fn,
+    clippy::format_push_string,
+    clippy::needless_pass_by_value,
+    clippy::elidable_lifetime_names,
+    clippy::manual_let_else,
+    clippy::if_not_else,
+    clippy::single_match_else,
+    clippy::doc_markdown,
+    clippy::module_name_repetitions,
+    clippy::too_many_lines,
+    clippy::similar_names,
+    clippy::needless_borrows_for_generic_args,
+    clippy::uninlined_format_args,
+    clippy::semicolon_if_nothing_returned,
+    clippy::needless_lifetimes,
+    clippy::useless_vec,
+    clippy::map_unwrap_or,
+    clippy::unnecessary_literal_bound,
+    clippy::needless_raw_string_hashes
+)]
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
@@ -49,7 +73,7 @@ impl LlmProvider for CountLlm {
 }
 
 fn md() -> Vec<u8> {
-    "# Doc\n\n## Sec\n\nBody.\n".as_bytes().to_vec()
+    b"# Doc\n\n## Sec\n\nBody.\n".to_vec()
 }
 
 #[tokio::test]
@@ -80,7 +104,10 @@ async fn identical_reingest_is_skipped_under_100ms() {
 
     // Re-ingest with identical content. Fast path must skip all LLM work.
     let t0 = std::time::Instant::now();
-    let handle2 = pb.ingest_document_with_progress(params.clone()).await.unwrap();
+    let handle2 = pb
+        .ingest_document_with_progress(params.clone())
+        .await
+        .unwrap();
     handle2.wait().await.unwrap();
     let elapsed = t0.elapsed();
     let after_second = llm.json_calls.load(Ordering::SeqCst);
@@ -106,7 +133,10 @@ async fn would_reingest_change_reports_no_change() {
         doc_id: Some(pagebridge_core::DocId::new("doc-pred").unwrap()),
         user_metadata: std::collections::BTreeMap::default(),
     };
-    let h = pb.ingest_document_with_progress(params.clone()).await.unwrap();
+    let h = pb
+        .ingest_document_with_progress(params.clone())
+        .await
+        .unwrap();
     h.wait().await.unwrap();
     let p = pb.would_reingest_change(&params).await.unwrap();
     assert!(matches!(p, ReingestPrediction::NoChange));

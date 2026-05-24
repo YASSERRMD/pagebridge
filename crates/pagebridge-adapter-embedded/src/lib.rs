@@ -222,9 +222,11 @@ impl EmbeddedAdapter {
         }
         tx.commit().map_err(|e| adapter_err("commit", e))?;
 
-        // Append to the tantivy writer without forcing a commit. The lazy
-        // CommitScheduler decides when to flush based on dirty count and age,
-        // collapsing N segment-flushes into one.
+        // Single-node upsert: commit synchronously so search-after-write
+        // semantics (the v1 contract) hold for callers that don't go through
+        // the batch API. The lazy CommitScheduler is reserved for the
+        // explicit `upsert_nodes_batch` path where the caller has opted into
+        // throughput-over-freshness trade-offs.
         let mut writer = self.writer.lock();
         writer.delete_term(Term::from_field_text(
             self.fields.node_id,
@@ -233,17 +235,14 @@ impl EmbeddedAdapter {
         writer
             .add_document(self.build_doc(node))
             .map_err(|e| adapter_err("tantivy add", e))?;
-        self.commit_scheduler.mark_dirty(1);
-        if self.commit_scheduler.should_commit() {
-            writer
-                .commit()
-                .map_err(|e| adapter_err("tantivy commit", e))?;
-            drop(writer);
-            self.reader
-                .reload()
-                .map_err(|e| adapter_err("reader reload", e))?;
-            self.commit_scheduler.note_committed();
-        }
+        writer
+            .commit()
+            .map_err(|e| adapter_err("tantivy commit", e))?;
+        drop(writer);
+        self.reader
+            .reload()
+            .map_err(|e| adapter_err("reader reload", e))?;
+        self.commit_scheduler.note_committed();
         Ok(())
     }
 

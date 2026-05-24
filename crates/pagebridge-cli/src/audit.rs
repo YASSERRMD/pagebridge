@@ -3,9 +3,7 @@
 use std::path::Path;
 
 use anyhow::{anyhow, Context, Result};
-use pagebridge_audit::{
-    replay_chain, AuditEvent, SignatureVerifier,
-};
+use pagebridge_audit::{replay_chain, AuditEvent, SignatureVerifier};
 use tokio::fs;
 
 use crate::AuditCmd;

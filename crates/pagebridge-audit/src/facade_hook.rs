@@ -113,8 +113,8 @@ mod tests {
     use crate::merkle::MerkleBatch;
     use crate::sign::SigningSecret;
     use crate::writer::{AuditSink, WriterConfig};
-    use parking_lot::Mutex;
     use pagebridge_core::workspace::WorkspaceId;
+    use parking_lot::Mutex;
 
     struct Capture(Mutex<Vec<AuditAction>>);
     #[async_trait::async_trait]

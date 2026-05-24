@@ -17,7 +17,15 @@
 //!
 //! See `docs/spec/verifiable-receipts-v1.md` for the wire spec.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::too_long_first_doc_paragraph,
+    clippy::useless_conversion,
+    clippy::default_trait_access,
+    clippy::stable_sort_primitive
+)]
 
 pub mod error;
 pub mod facade_issuer;

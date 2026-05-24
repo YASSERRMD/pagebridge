@@ -38,12 +38,7 @@ impl Reranker for VoyageReranker {
     fn model(&self) -> &str {
         &self.model
     }
-    async fn rerank(
-        &self,
-        query: &str,
-        docs: &[String],
-        top_k: usize,
-    ) -> Result<Vec<RerankedDoc>> {
+    async fn rerank(&self, query: &str, docs: &[String], top_k: usize) -> Result<Vec<RerankedDoc>> {
         let body = json!({
             "model": self.model,
             "query": query,

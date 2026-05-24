@@ -60,10 +60,7 @@ impl PluginRegistry {
             return Err(InstallError::AbiMismatch(entry.manifest.abi_version));
         }
         let mut guard = self.inner.write();
-        if guard
-            .iter()
-            .any(|e| e.manifest.name == entry.manifest.name)
-        {
+        if guard.iter().any(|e| e.manifest.name == entry.manifest.name) {
             return Err(InstallError::Duplicate(entry.manifest.name));
         }
         guard.push(entry);

@@ -22,7 +22,8 @@ impl RegexDetector {
         Self {
             email: Regex::new(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}").unwrap(),
             ssn: Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap(),
-            phone: Regex::new(r"\b\+?\d{1,3}[\s\-]?\(?\d{3}\)?[\s\-]?\d{3,4}[\s\-]?\d{4}\b").unwrap(),
+            phone: Regex::new(r"\b\+?\d{1,3}[\s\-]?\(?\d{3}\)?[\s\-]?\d{3,4}[\s\-]?\d{4}\b")
+                .unwrap(),
             credit_card: Regex::new(r"\b(?:\d[ -]*?){13,19}\b").unwrap(),
         }
     }
@@ -64,7 +65,9 @@ mod tests {
     #[test]
     fn detects_email_and_ssn() {
         let d = RegexDetector::new();
-        let label = d.detect("contact: jane@example.com, ssn 123-45-6789").unwrap();
+        let label = d
+            .detect("contact: jane@example.com, ssn 123-45-6789")
+            .unwrap();
         match label {
             SensitivityLabel::Pii { categories } => {
                 assert!(categories.contains(&"email".to_string()));

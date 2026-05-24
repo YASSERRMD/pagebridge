@@ -21,12 +21,12 @@ pub struct Scorer {
 }
 
 impl Scorer {
-    pub fn new(
-        judge: Arc<dyn Judge>,
-        store: Arc<dyn QualityStore>,
-        config: QualityConfig,
-    ) -> Self {
-        Self { judge, store, config }
+    pub fn new(judge: Arc<dyn Judge>, store: Arc<dyn QualityStore>, config: QualityConfig) -> Self {
+        Self {
+            judge,
+            store,
+            config,
+        }
     }
 
     /// Decide whether to sample this query, and if so, score it and
@@ -75,19 +75,27 @@ mod tests {
 
     #[tokio::test]
     async fn always_samples_when_rate_is_one() {
-        let cfg = QualityConfig { sample_rate: 1.0, ..Default::default() };
+        let cfg = QualityConfig {
+            sample_rate: 1.0,
+            ..Default::default()
+        };
         let store = Arc::new(MemoryQualityStore::new());
         let s = Scorer::new(Arc::new(NoopJudge), store.clone(), cfg);
-        s.maybe_score(0, "acme", "q1", "q", "a", &["e".into()]).await;
+        s.maybe_score(0, "acme", "q1", "q", "a", &["e".into()])
+            .await;
         assert_eq!(store.since(0).await.len(), 1);
     }
 
     #[tokio::test]
     async fn never_samples_when_rate_is_zero() {
-        let cfg = QualityConfig { sample_rate: 0.0, ..Default::default() };
+        let cfg = QualityConfig {
+            sample_rate: 0.0,
+            ..Default::default()
+        };
         let store = Arc::new(MemoryQualityStore::new());
         let s = Scorer::new(Arc::new(NoopJudge), store.clone(), cfg);
-        s.maybe_score(0, "acme", "q1", "q", "a", &["e".into()]).await;
+        s.maybe_score(0, "acme", "q1", "q", "a", &["e".into()])
+            .await;
         assert_eq!(store.since(0).await.len(), 0);
     }
 }

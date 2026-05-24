@@ -34,7 +34,10 @@ fn snapshot_id_is_byte_identical_between_runs() {
 
 #[test]
 fn order_by_is_byte_identical() {
-    assert_eq!(order_by_for(QueryOrder::ByNodeId), order_by_for(QueryOrder::ByNodeId));
+    assert_eq!(
+        order_by_for(QueryOrder::ByNodeId),
+        order_by_for(QueryOrder::ByNodeId)
+    );
 }
 
 #[test]

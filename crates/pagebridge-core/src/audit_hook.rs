@@ -5,6 +5,8 @@
 //! [`pagebridge-audit::AuditEvent`] is constructed inside the audit crate
 //! to keep this crate dependency-free of signing/Merkle code.
 
+#![allow(clippy::too_long_first_doc_paragraph)]
+
 use std::sync::Arc;
 
 use crate::id::DocId;

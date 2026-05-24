@@ -6,9 +6,7 @@ use std::sync::Arc;
 
 use pagebridge_core::adapter::MemoryAdapter;
 use pagebridge_core::llm::EchoLlmProvider;
-use pagebridge_core::{
-    DiffMode, IngestParams, Pagebridge, SourceKind, UpdateParams,
-};
+use pagebridge_core::{DiffMode, IngestParams, Pagebridge, SourceKind, UpdateParams};
 
 async fn make_bridge() -> Pagebridge {
     let storage = Arc::new(MemoryAdapter::new());

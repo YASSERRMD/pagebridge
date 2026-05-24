@@ -1,6 +1,31 @@
 //! Tests for the bounded-concurrency summary fan-out.
 
-#![allow(clippy::cast_possible_truncation, clippy::redundant_clone)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::redundant_clone,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_lossless,
+    clippy::missing_const_for_fn,
+    clippy::format_push_string,
+    clippy::needless_pass_by_value,
+    clippy::elidable_lifetime_names,
+    clippy::manual_let_else,
+    clippy::if_not_else,
+    clippy::single_match_else,
+    clippy::doc_markdown,
+    clippy::module_name_repetitions,
+    clippy::too_many_lines,
+    clippy::similar_names,
+    clippy::needless_borrows_for_generic_args,
+    clippy::uninlined_format_args,
+    clippy::semicolon_if_nothing_returned,
+    clippy::needless_lifetimes,
+    clippy::useless_vec,
+    clippy::map_unwrap_or,
+    clippy::unnecessary_literal_bound,
+    clippy::needless_raw_string_hashes
+)]
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
@@ -12,9 +37,7 @@ use async_trait::async_trait;
 use pagebridge_core::adapter::MemoryAdapter;
 use pagebridge_core::error::Result;
 use pagebridge_core::ingest::ingest_with_config;
-use pagebridge_core::llm::{
-    CompletionRequest, CompletionResponse, FinishReason, LlmProvider,
-};
+use pagebridge_core::llm::{CompletionRequest, CompletionResponse, FinishReason, LlmProvider};
 use pagebridge_core::prompts::PromptLibrary;
 use pagebridge_core::types::{IngestParams, SourceKind};
 use pagebridge_core::SummaryWorkerConfig;

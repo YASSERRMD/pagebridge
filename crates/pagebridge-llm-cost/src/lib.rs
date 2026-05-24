@@ -5,7 +5,7 @@
 //! community-maintained snapshot at the time of release; production
 //! deployments can refresh it at runtime.
 
-#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_errors_doc, clippy::missing_const_for_fn)]
 
 use std::collections::BTreeMap;
 
@@ -95,7 +95,9 @@ mod tests {
             output_per_1m_micro_usd: 600_000,
             effective_date: "2026-01-01".into(),
         });
-        let cost = c.cost_micro_usd("openai", "gpt-4o-mini", 1_000_000, 1_000_000).unwrap();
+        let cost = c
+            .cost_micro_usd("openai", "gpt-4o-mini", 1_000_000, 1_000_000)
+            .unwrap();
         assert_eq!(cost, 150_000 + 600_000);
     }
 

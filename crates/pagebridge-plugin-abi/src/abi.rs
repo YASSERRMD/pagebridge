@@ -58,10 +58,7 @@ impl OwnedManifest {
             if p.is_null() {
                 return None;
             }
-            std::ffi::CStr::from_ptr(p)
-                .to_str()
-                .ok()
-                .map(str::to_owned)
+            std::ffi::CStr::from_ptr(p).to_str().ok().map(str::to_owned)
         };
         Some(Self {
             abi_version: raw.abi_version,

@@ -22,14 +22,8 @@ const TOOL_INDEX: &[(&str, &str)] = &[
         "pagebridge.list_documents",
         "List every document the pagebridge instance holds.",
     ),
-    (
-        "pagebridge.read_node",
-        "Fetch a single node by id.",
-    ),
-    (
-        "pagebridge.children",
-        "List the children of a node.",
-    ),
+    ("pagebridge.read_node", "Fetch a single node by id."),
+    ("pagebridge.children", "List the children of a node."),
 ];
 
 fn schema_for(tool_name: &str) -> Value {
@@ -114,7 +108,10 @@ async fn call_tool(bridge: &Arc<Pagebridge>, params: Value) -> Result<Value, Str
         .get("name")
         .and_then(Value::as_str)
         .ok_or_else(|| "missing 'name'".to_owned())?;
-    let args = params.get("arguments").cloned().unwrap_or_else(|| json!({}));
+    let args = params
+        .get("arguments")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
     match name {
         "pagebridge.ask" => {
             let q = args
@@ -138,10 +135,8 @@ async fn call_tool(bridge: &Arc<Pagebridge>, params: Value) -> Result<Value, Str
                 .get("query")
                 .and_then(Value::as_str)
                 .ok_or_else(|| "missing 'query'".to_owned())?;
-            let limit = usize::try_from(
-                args.get("limit").and_then(Value::as_i64).unwrap_or(10),
-            )
-            .unwrap_or(10);
+            let limit = usize::try_from(args.get("limit").and_then(Value::as_i64).unwrap_or(10))
+                .unwrap_or(10);
             let hits = bridge
                 .bm25_search(q, limit)
                 .await

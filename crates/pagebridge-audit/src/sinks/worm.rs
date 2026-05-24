@@ -73,7 +73,11 @@ impl AuditSink for WormFileSink {
         }
         let line = serde_json::to_vec(event)?;
         let path = self.events_path(event.workspace_id.as_str());
-        let mut f = OpenOptions::new().create(true).append(true).open(&path).await?;
+        let mut f = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .await?;
         f.write_all(&line).await?;
         f.write_all(b"\n").await?;
         f.flush().await?;
@@ -98,7 +102,11 @@ impl AuditSink for WormFileSink {
         }
         let line = serde_json::to_vec(batch)?;
         let path = self.batches_path(&batch.workspace_id);
-        let mut f = OpenOptions::new().create(true).append(true).open(&path).await?;
+        let mut f = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .await?;
         f.write_all(&line).await?;
         f.write_all(b"\n").await?;
         f.flush().await?;

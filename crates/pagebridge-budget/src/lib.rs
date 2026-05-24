@@ -5,7 +5,16 @@
 //! BudgetTracker enforces them at the API boundary; Forecaster
 //! projects monthly spend from a rolling 7-day trend.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::significant_drop_tightening,
+    clippy::significant_drop_in_scrutinee,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 
 use std::collections::BTreeMap;
 use std::time::Instant;

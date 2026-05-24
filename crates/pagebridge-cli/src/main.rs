@@ -23,7 +23,9 @@
     clippy::manual_let_else,
     clippy::unused_self,
     clippy::let_underscore_untyped,
-    clippy::wildcard_imports
+    clippy::wildcard_imports,
+    clippy::unnecessary_cast,
+    clippy::cast_lossless
 )]
 
 mod audit;
@@ -379,10 +381,7 @@ async fn main() -> Result<()> {
                 let mode = pagebridge_deterministic::DeterministicMode::strict();
                 eprintln!(
                     "[deterministic] seed={} T={} top_p={} snapshot={:?}",
-                    mode.llm_seed,
-                    mode.llm_temperature_milli,
-                    mode.llm_top_p_milli,
-                    snapshot
+                    mode.llm_seed, mode.llm_temperature_milli, mode.llm_top_p_milli, snapshot
                 );
             }
             if let Some(ts) = &at {
@@ -392,7 +391,11 @@ async fn main() -> Result<()> {
                 use futures::StreamExt;
                 use std::io::Write;
                 let mut s = match &doc {
-                    Some(d) => bridge.ask_stream_in_doc(&DocId::new(d.clone())?, &question).await?,
+                    Some(d) => {
+                        bridge
+                            .ask_stream_in_doc(&DocId::new(d.clone())?, &question)
+                            .await?
+                    }
                     None => bridge.ask_stream(&question).await?,
                 };
                 let mut stdout = std::io::stdout().lock();
@@ -408,7 +411,10 @@ async fn main() -> Result<()> {
                         pagebridge::AnswerChunk::Citation { citation } => {
                             citations.push(citation);
                         }
-                        pagebridge::AnswerChunk::Done { trace, citations: cs } => {
+                        pagebridge::AnswerChunk::Done {
+                            trace,
+                            citations: cs,
+                        } => {
                             if citations.is_empty() {
                                 citations = cs;
                             }
@@ -488,14 +494,20 @@ async fn main() -> Result<()> {
                         println!("(no plugins installed)");
                     } else {
                         for e in entries {
-                            println!("{} v{} (vendor: {})", e.manifest.name, e.manifest.version, e.manifest.vendor);
+                            println!(
+                                "{} v{} (vendor: {})",
+                                e.manifest.name, e.manifest.version, e.manifest.vendor
+                            );
                         }
                     }
                 }
                 PluginsCmd::AbiVersion => println!("{ABI_VERSION}"),
             }
         }
-        Cmd::Serve { bind, insecure_allow_remote } => {
+        Cmd::Serve {
+            bind,
+            insecure_allow_remote,
+        } => {
             let cfg = PbConfig::load(&config_path).unwrap_or_default();
             let bridge = open_bridge(&cfg).await?;
             let addr: std::net::SocketAddr = bind.parse()?;
@@ -705,7 +717,6 @@ async fn open_bridge(cfg: &PbConfig) -> Result<Pagebridge> {
     Ok(Pagebridge::new(storage, llm).await?)
 }
 
-
 fn default_key_path() -> PathBuf {
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
@@ -715,11 +726,10 @@ fn default_key_path() -> PathBuf {
 
 fn parse_ttl(s: &str) -> Result<std::time::Duration> {
     let s = s.trim();
-    let (num, unit) = s.split_at(
-        s.find(|c: char| !c.is_ascii_digit())
-            .unwrap_or(s.len()),
-    );
-    let n: u64 = num.parse().map_err(|_| anyhow!("invalid ttl number: {s}"))?;
+    let (num, unit) = s.split_at(s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len()));
+    let n: u64 = num
+        .parse()
+        .map_err(|_| anyhow!("invalid ttl number: {s}"))?;
     let secs = match unit.trim() {
         "" | "s" => n,
         "m" => n * 60,
@@ -731,7 +741,9 @@ fn parse_ttl(s: &str) -> Result<std::time::Duration> {
 }
 
 fn run_auth(cmd: AuthCmd) -> Result<()> {
-    use pagebridge_auth::{mint as auth_mint, verify as auth_verify, Capability, CapabilitySet, RootKey, TokenSpec};
+    use pagebridge_auth::{
+        mint as auth_mint, verify as auth_verify, Capability, CapabilitySet, RootKey, TokenSpec,
+    };
     match cmd {
         AuthCmd::CreateKey { out } => {
             let path = out.map_or_else(default_key_path, PathBuf::from);
@@ -740,7 +752,13 @@ fn run_auth(cmd: AuthCmd) -> Result<()> {
             println!("root key written to {}", path.display());
             println!("public key (hex): {}", key.public_hex);
         }
-        AuthCmd::Mint { rights, workspace, ttl, note, key } => {
+        AuthCmd::Mint {
+            rights,
+            workspace,
+            ttl,
+            note,
+            key,
+        } => {
             let key_path = key.map_or_else(default_key_path, PathBuf::from);
             let root = RootKey::load(&key_path)
                 .with_context(|| format!("load root key from {}", key_path.display()))?;

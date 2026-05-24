@@ -96,7 +96,10 @@ async fn full_mssql_roundtrip() {
 
     let doc = DocId::new("d1").unwrap();
     adapter.upsert_node(&make_root(&doc)).await.unwrap();
-    adapter.upsert_node(&make_leaf(&doc, 1, 1, "Timeline")).await.unwrap();
+    adapter
+        .upsert_node(&make_leaf(&doc, 1, 1, "Timeline"))
+        .await
+        .unwrap();
     adapter
         .upsert_document(&DocumentEntry {
             doc_id: doc.clone(),

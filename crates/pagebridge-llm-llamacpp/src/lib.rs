@@ -212,8 +212,8 @@ mod driver {
             let backend = LlamaBackend::init().map_err(|e| llm_err("backend init", e))?;
             let mut params = LlamaModelParams::default();
             params = params.with_n_gpu_layers(u32::try_from(cfg.n_gpu_layers).unwrap_or(0));
-            let model =
-                LlamaModel::load_from_file(&backend, path, &params).map_err(|e| llm_err("load gguf", e))?;
+            let model = LlamaModel::load_from_file(&backend, path, &params)
+                .map_err(|e| llm_err("load gguf", e))?;
             Ok(Self {
                 backend,
                 model: Mutex::new(model),

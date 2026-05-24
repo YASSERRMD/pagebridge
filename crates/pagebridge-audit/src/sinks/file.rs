@@ -41,10 +41,12 @@ impl FileSink {
     }
 
     async fn ensure_dir(&self) -> Result<()> {
-        create_dir_all(&self.base).await.map_err(|e| AuditError::Sink {
-            sink: self.name.clone(),
-            message: format!("mkdir: {e}"),
-        })
+        create_dir_all(&self.base)
+            .await
+            .map_err(|e| AuditError::Sink {
+                sink: self.name.clone(),
+                message: format!("mkdir: {e}"),
+            })
     }
 }
 
@@ -96,10 +98,8 @@ mod tests {
     async fn writes_ndjson_lines_for_events_and_batch() {
         let dir = tempfile::tempdir().unwrap();
         let sink = Arc::new(FileSink::new(dir.path()));
-        let mut writer = AuditWriter::new(
-            SigningSecret::generate(),
-            WriterConfig { batch_size: 3 },
-        );
+        let mut writer =
+            AuditWriter::new(SigningSecret::generate(), WriterConfig { batch_size: 3 });
         writer.add_sink(sink.clone());
 
         let ws = WorkspaceId::new("acme").unwrap();

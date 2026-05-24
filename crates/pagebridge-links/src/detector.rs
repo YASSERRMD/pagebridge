@@ -37,15 +37,11 @@ static DOI_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)10\.\d{4,9}/[\-._;()/:A-Z0-9]+").expect("doi regex"));
 
 static ISBN_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r"(?:ISBN(?:-1[03])?:?\s*)?(?:\d{9}[\dX]|\d{10}|\d{13})",
-    )
-    .expect("isbn regex")
+    Regex::new(r"(?:ISBN(?:-1[03])?:?\s*)?(?:\d{9}[\dX]|\d{10}|\d{13})").expect("isbn regex")
 });
 
 static SECTION_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?:see\s+)?(?:sec(?:tion|\.)?)\s+(\d+(?:\.\d+){0,3})")
-        .expect("section regex")
+    Regex::new(r"(?i)(?:see\s+)?(?:sec(?:tion|\.)?)\s+(\d+(?:\.\d+){0,3})").expect("section regex")
 });
 
 /// Run every detector over `text` and return the merged list of references.

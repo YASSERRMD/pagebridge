@@ -5,17 +5,21 @@
 //! uses them at the navigation step to re-score BM25 candidates before
 //! handing them to the navigation LLM.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::unnecessary_literal_bound
+)]
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+#[cfg(feature = "cohere")]
+pub mod cohere;
 pub mod stub;
 #[cfg(feature = "voyage")]
 pub mod voyage;
-#[cfg(feature = "cohere")]
-pub mod cohere;
 
 #[derive(Debug, Error)]
 pub enum RerankerError {
@@ -37,10 +41,5 @@ pub type Result<T> = std::result::Result<T, RerankerError>;
 pub trait Reranker: Send + Sync + 'static {
     fn name(&self) -> &'static str;
     fn model(&self) -> &str;
-    async fn rerank(
-        &self,
-        query: &str,
-        docs: &[String],
-        top_k: usize,
-    ) -> Result<Vec<RerankedDoc>>;
+    async fn rerank(&self, query: &str, docs: &[String], top_k: usize) -> Result<Vec<RerankedDoc>>;
 }

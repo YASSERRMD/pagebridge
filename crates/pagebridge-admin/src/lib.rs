@@ -99,11 +99,7 @@ pub fn router(bridge: Pagebridge) -> Router {
 
 async fn metrics_endpoint() -> Response {
     match pagebridge_obs::encode_text() {
-        Ok(body) => (
-            [(header::CONTENT_TYPE, "text/plain; version=0.0.4")],
-            body,
-        )
-            .into_response(),
+        Ok(body) => ([(header::CONTENT_TYPE, "text/plain; version=0.0.4")], body).into_response(),
         Err(e) => api_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }
 }
@@ -226,9 +222,9 @@ async fn ask_stream(State(s): State<AppState>, Json(body): Json<AskBody>) -> Res
             }
         }
     };
-    let body = Body::from_stream(body_stream.map(|r: std::io::Result<String>| {
-        r.map(axum::body::Bytes::from)
-    }));
+    let body = Body::from_stream(
+        body_stream.map(|r: std::io::Result<String>| r.map(axum::body::Bytes::from)),
+    );
     Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "application/x-ndjson")

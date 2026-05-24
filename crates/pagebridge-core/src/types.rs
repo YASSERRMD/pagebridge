@@ -1,5 +1,7 @@
 //! Supporting types: ingest params, document entries, search hits, answers, traces.
 
+#![allow(clippy::missing_const_for_fn)]
+
 use std::collections::BTreeMap;
 
 use crate::id::{DocId, NodeId};
@@ -161,11 +163,15 @@ pub struct DocumentEntry {
     /// Sha256 over the document's raw text. `None` for entries written by
     /// pre-Phase-I8 ingests. Populated by [`crate::ingest`] so re-ingest
     /// fast-paths can compare without walking the tree.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    ///
+    /// Note: we use `#[serde(default)]` (no `skip_serializing_if`) so the
+    /// binary encodings (bincode in the embedded adapter) keep a stable
+    /// field layout across versions.
+    #[serde(default)]
     pub raw_text_hash: Option<[u8; 32]>,
     /// Sha256 over the structural skeleton (titles + levels + parent edges)
     /// for the document. `None` for legacy entries; populated by Phase I8.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub structural_hash: Option<[u8; 32]>,
 }
 

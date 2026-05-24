@@ -9,11 +9,7 @@ use std::collections::HashSet;
 /// Recall at k: fraction of ground-truth citations that appear in the top
 /// `k` predicted citations.
 #[must_use]
-pub fn retrieval_recall_at_k(
-    predicted: &[String],
-    ground_truth: &[String],
-    k: usize,
-) -> f32 {
+pub fn retrieval_recall_at_k(predicted: &[String], ground_truth: &[String], k: usize) -> f32 {
     if ground_truth.is_empty() {
         return 1.0;
     }
@@ -45,9 +41,7 @@ pub fn bleu_lite(prediction: &str, reference: &str) -> f32 {
     if reference.trim().is_empty() {
         return 0.0;
     }
-    let pred_tokens: Vec<&str> = prediction
-        .split_whitespace()
-        .collect();
+    let pred_tokens: Vec<&str> = prediction.split_whitespace().collect();
     let ref_tokens: Vec<&str> = reference.split_whitespace().collect();
     if pred_tokens.is_empty() {
         return 0.0;
@@ -73,10 +67,8 @@ fn ngram_precision(pred: &[&str], reference: &[&str], n: usize) -> f32 {
         return 0.0;
     }
     let pred_grams: Vec<&[&str]> = pred.windows(n).collect();
-    let ref_grams: std::collections::HashSet<Vec<&str>> = reference
-        .windows(n)
-        .map(<[&str]>::to_vec)
-        .collect();
+    let ref_grams: std::collections::HashSet<Vec<&str>> =
+        reference.windows(n).map(<[&str]>::to_vec).collect();
     let hits = pred_grams
         .iter()
         .filter(|g| ref_grams.contains(&g.to_vec()))

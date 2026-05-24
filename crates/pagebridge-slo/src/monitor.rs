@@ -45,7 +45,10 @@ impl SloMonitor {
     pub fn record(&self, outcome: RequestOutcome) {
         let mut h = self.history.lock();
         let now = Instant::now();
-        h.push_back(Bucket { at: now, o: outcome });
+        h.push_back(Bucket {
+            at: now,
+            o: outcome,
+        });
         while let Some(front) = h.front() {
             if now.duration_since(front.at) > self.window {
                 h.pop_front();
@@ -65,8 +68,18 @@ impl SloMonitor {
                 p99_latency_ms_estimate: 0,
                 error_rate: 0.0,
                 spend_micro_usd: 0,
-                fast_burn: BurnRate { window: BurnWindow::Fast1h, burn_multiple: 0.0, error_count: 0, total_count: 0 },
-                slow_burn: BurnRate { window: BurnWindow::Slow24h, burn_multiple: 0.0, error_count: 0, total_count: 0 },
+                fast_burn: BurnRate {
+                    window: BurnWindow::Fast1h,
+                    burn_multiple: 0.0,
+                    error_count: 0,
+                    total_count: 0,
+                },
+                slow_burn: BurnRate {
+                    window: BurnWindow::Slow24h,
+                    burn_multiple: 0.0,
+                    error_count: 0,
+                    total_count: 0,
+                },
                 healthy: true,
             };
         }
@@ -75,12 +88,13 @@ impl SloMonitor {
         let mut latencies: Vec<u32> = g.iter().map(|b| b.o.latency_ms).collect();
         latencies.sort_unstable();
         let p99_idx = ((latencies.len() as f32) * 0.99) as usize;
-        let p99 = *latencies.get(p99_idx.min(latencies.len() - 1)).unwrap_or(&0);
+        let p99 = *latencies
+            .get(p99_idx.min(latencies.len() - 1))
+            .unwrap_or(&0);
         let spend: u64 = g.iter().map(|b| b.o.cost_micro_usd).sum();
         let fast_burn = self.compute_burn(&g, Duration::from_secs(3600), BurnWindow::Fast1h);
         let slow_burn = self.compute_burn(&g, Duration::from_secs(24 * 3600), BurnWindow::Slow24h);
-        let healthy = error_rate <= self.config.error_rate_max
-            && p99 <= self.config.p99_latency_ms;
+        let healthy = error_rate <= self.config.error_rate_max && p99 <= self.config.p99_latency_ms;
         SloStatus {
             window_count: total,
             p99_latency_ms_estimate: p99,
@@ -163,7 +177,10 @@ mod tests {
 
     #[test]
     fn halt_when_close_to_budget() {
-        let cfg = SloConfig { p99_latency_ms: 1000, ..Default::default() };
+        let cfg = SloConfig {
+            p99_latency_ms: 1000,
+            ..Default::default()
+        };
         let m = SloMonitor::new(cfg);
         let signal = m.halt_signal(900);
         assert!(matches!(signal, HaltSignal::HaltSoft { .. }));

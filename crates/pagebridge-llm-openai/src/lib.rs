@@ -16,7 +16,8 @@
     clippy::or_fun_call,
     clippy::cast_lossless,
     clippy::match_same_arms,
-    clippy::cognitive_complexity
+    clippy::cognitive_complexity,
+    clippy::missing_const_for_fn
 )]
 
 use std::time::Duration;
@@ -83,7 +84,11 @@ impl OpenAiCompatibleProvider {
 
     /// Connect to Fireworks AI (OpenAI-compatible) with the given API key.
     pub fn fireworks(api_key: impl Into<String>, model: impl Into<String>) -> Self {
-        Self::custom("https://api.fireworks.ai/inference", Some(api_key.into()), model)
+        Self::custom(
+            "https://api.fireworks.ai/inference",
+            Some(api_key.into()),
+            model,
+        )
     }
 
     /// Connect to Together AI (OpenAI-compatible) with the given API key.
@@ -113,7 +118,11 @@ impl OpenAiCompatibleProvider {
 
     /// Connect to Replicate (OpenAI-compatible adapter endpoint).
     pub fn replicate(api_key: impl Into<String>, model: impl Into<String>) -> Self {
-        Self::custom("https://openai-proxy.replicate.com", Some(api_key.into()), model)
+        Self::custom(
+            "https://openai-proxy.replicate.com",
+            Some(api_key.into()),
+            model,
+        )
     }
 
     /// Connect to a Modal deployment exposing an OpenAI-compatible /v1 endpoint.

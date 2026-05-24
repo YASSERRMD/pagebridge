@@ -39,9 +39,10 @@ impl MySqlAdapter {
         let opts = mysql_async::OptsBuilder::from_opts(
             mysql_async::Opts::from_url(url).map_err(|e| err("parse url", e))?,
         )
-        .pool_opts(PoolOpts::default().with_constraints(
-            mysql_async::PoolConstraints::new(0, 16).unwrap_or_default(),
-        ));
+        .pool_opts(
+            PoolOpts::default()
+                .with_constraints(mysql_async::PoolConstraints::new(0, 16).unwrap_or_default()),
+        );
         let pool = Pool::new(opts);
         let adapter = Self { pool };
         adapter.ping().await?;
@@ -188,5 +189,5 @@ impl StorageAdapter for MySqlAdapter {
     }
 }
 
-mod schema;
 mod ops;
+mod schema;

@@ -92,7 +92,9 @@ impl AuditWriter {
         let workspace = event.workspace_id.clone();
         let (prev_hash, flush_batch) = {
             let mut chains = self.chains.lock();
-            let state = chains.entry(workspace.clone()).or_insert_with(ChainState::new);
+            let state = chains
+                .entry(workspace.clone())
+                .or_insert_with(ChainState::new);
             (state.last_hash, false)
         };
         let _ = flush_batch;
@@ -102,7 +104,9 @@ impl AuditWriter {
 
         let maybe_batch = {
             let mut chains = self.chains.lock();
-            let state = chains.entry(workspace.clone()).or_insert_with(ChainState::new);
+            let state = chains
+                .entry(workspace.clone())
+                .or_insert_with(ChainState::new);
             state.last_hash = sealed_hash;
             if state.first_event_id.is_none() {
                 state.first_event_id = Some(event.event_id.to_string());
@@ -146,7 +150,9 @@ impl AuditWriter {
     pub async fn flush(&self, workspace: &WorkspaceId) -> Result<Option<MerkleBatch>> {
         let maybe_batch = {
             let mut chains = self.chains.lock();
-            let state = chains.entry(workspace.clone()).or_insert_with(ChainState::new);
+            let state = chains
+                .entry(workspace.clone())
+                .or_insert_with(ChainState::new);
             if state.pending.is_empty() {
                 return Ok(None);
             }
@@ -231,10 +237,7 @@ mod tests {
     #[tokio::test]
     async fn chains_link_one_to_the_next() {
         let secret = SigningSecret::generate();
-        let mut writer = AuditWriter::new(
-            secret.clone(),
-            WriterConfig { batch_size: 16 },
-        );
+        let mut writer = AuditWriter::new(secret.clone(), WriterConfig { batch_size: 16 });
         let sink = CapturingSink::new();
         writer.add_sink(sink.clone());
         let ws = WorkspaceId::new("acme").unwrap();
@@ -252,10 +255,7 @@ mod tests {
     #[tokio::test]
     async fn batch_is_emitted_on_threshold() {
         let secret = SigningSecret::generate();
-        let mut writer = AuditWriter::new(
-            secret,
-            WriterConfig { batch_size: 4 },
-        );
+        let mut writer = AuditWriter::new(secret, WriterConfig { batch_size: 4 });
         let sink = CapturingSink::new();
         writer.add_sink(sink.clone());
         let ws = WorkspaceId::new("acme").unwrap();
@@ -270,10 +270,7 @@ mod tests {
     #[tokio::test]
     async fn manual_flush_drains_buffer() {
         let secret = SigningSecret::generate();
-        let mut writer = AuditWriter::new(
-            secret,
-            WriterConfig { batch_size: 1024 },
-        );
+        let mut writer = AuditWriter::new(secret, WriterConfig { batch_size: 1024 });
         let sink = CapturingSink::new();
         writer.add_sink(sink.clone());
         let ws = WorkspaceId::new("acme").unwrap();

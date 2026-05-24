@@ -59,10 +59,7 @@ pub fn score_text(text: &str) -> f32 {
     };
 
     let lower = text.to_ascii_lowercase();
-    let stopword_hits = STOPWORDS
-        .iter()
-        .filter(|w| lower.contains(*w))
-        .count() as f32;
+    let stopword_hits = STOPWORDS.iter().filter(|w| lower.contains(*w)).count() as f32;
     let stopword_score = (stopword_hits / 5.0).min(1.0);
 
     // Combine: punish high control/pua, reward stopwords + plausible word shape.
@@ -82,8 +79,8 @@ pub fn needs_vision(text: &str) -> bool {
 }
 
 const STOPWORDS: &[&str] = &[
-    " the ", " and ", " of ", " to ", " in ", " a ", " is ", " for ", " on ", " with ",
-    " that ", " by ", " as ", " be ", " this ", " an ", " or ", " from ",
+    " the ", " and ", " of ", " to ", " in ", " a ", " is ", " for ", " on ", " with ", " that ",
+    " by ", " as ", " be ", " this ", " an ", " or ", " from ",
 ];
 
 #[cfg(test)]

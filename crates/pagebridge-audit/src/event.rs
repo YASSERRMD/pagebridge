@@ -13,8 +13,8 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
-use pagebridge_core::workspace::WorkspaceId;
 use pagebridge_core::id::{DocId, NodeId};
+use pagebridge_core::workspace::WorkspaceId;
 
 /// The kind of action a single audit event records.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

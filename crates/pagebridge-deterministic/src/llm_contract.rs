@@ -66,11 +66,9 @@ mod tests {
 
     #[test]
     fn non_deterministic_is_not_strict_safe() {
-        assert!(!DeterminismContract::non_deterministic(
-            "openai",
-            "gpt-4o-rt",
-            "no seed support"
-        )
-        .is_strict_safe());
+        assert!(
+            !DeterminismContract::non_deterministic("openai", "gpt-4o-rt", "no seed support")
+                .is_strict_safe()
+        );
     }
 }

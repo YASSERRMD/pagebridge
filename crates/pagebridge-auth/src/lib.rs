@@ -23,8 +23,8 @@ pub use token::{mint, verify, TokenSpec, VerifiedToken};
 use std::sync::Arc;
 
 use biscuit_auth::PublicKey;
-use parking_lot::RwLock;
 use pagebridge_core::error::{PagebridgeError, Result};
+use parking_lot::RwLock;
 
 /// Server-side verifier: holds the root public key and enforces capability
 /// checks on incoming requests.

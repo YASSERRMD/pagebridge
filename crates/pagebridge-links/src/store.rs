@@ -67,11 +67,7 @@ impl LinkStore {
     /// All outbound links from `node`.
     #[must_use]
     pub fn links_from(&self, node: &NodeId) -> Vec<Link> {
-        self.inner
-            .read()
-            .get(node)
-            .cloned()
-            .unwrap_or_default()
+        self.inner.read().get(node).cloned().unwrap_or_default()
     }
 
     /// All inbound links to `node` (linear scan; the store is small in
@@ -123,11 +119,8 @@ fn match_link<'a>(
     match link.kind {
         LinkKind::TitleRef => {
             let needle = link.raw_text.to_ascii_lowercase();
-            docs.iter().find(|(_, title, _)| {
-                title
-                    .to_ascii_lowercase()
-                    .contains(&needle)
-            })
+            docs.iter()
+                .find(|(_, title, _)| title.to_ascii_lowercase().contains(&needle))
         }
         LinkKind::Url | LinkKind::Doi | LinkKind::Isbn | LinkKind::SectionRef => {
             // No automatic resolution for these yet; v0.6 will plumb in a URL
@@ -172,11 +165,7 @@ mod tests {
         let to_doc = DocId::new("policy").unwrap();
         let from_node = NodeId::root(&from_doc);
         let to_root = NodeId::root(&to_doc);
-        store.insert(make_link(
-            &from_node,
-            "Carbon policy",
-            LinkKind::TitleRef,
-        ));
+        store.insert(make_link(&from_node, "Carbon policy", LinkKind::TitleRef));
         let docs = vec![(to_doc.clone(), "Carbon Policy 2026".into(), to_root.clone())];
         let count = store.resolve_against(&docs);
         assert_eq!(count, 1);

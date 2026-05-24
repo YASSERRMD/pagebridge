@@ -235,10 +235,8 @@ impl StorageAdapter for JsonFileAdapter {
         let nodes = nodes.to_vec();
         tokio::task::spawn_blocking(move || {
             // Group by doc_id so we write each affected file at most once.
-            let mut by_doc: std::collections::BTreeMap<
-                pagebridge_core::DocId,
-                Vec<NodeRecord>,
-            > = std::collections::BTreeMap::new();
+            let mut by_doc: std::collections::BTreeMap<pagebridge_core::DocId, Vec<NodeRecord>> =
+                std::collections::BTreeMap::new();
             for n in nodes {
                 by_doc.entry(n.doc_id.clone()).or_default().push(n);
             }
@@ -247,9 +245,7 @@ impl StorageAdapter for JsonFileAdapter {
                 for n in &ns {
                     tree.nodes.insert(n.node_id.as_str().to_owned(), n.clone());
                 }
-                me.cache
-                    .write()
-                    .insert(doc_id.clone(), clone_tree(&tree));
+                me.cache.write().insert(doc_id.clone(), clone_tree(&tree));
                 me.save_tree(&doc_id, &tree)?;
             }
             Ok(())
