@@ -303,6 +303,13 @@ impl Pagebridge {
         Ok(())
     }
 
+    /// Force any deferred write-side buffers to commit. For the embedded
+    /// adapter this triggers a tantivy commit so subsequent BM25 queries
+    /// see every recently upserted node. SQL adapters are unaffected.
+    pub async fn flush(&self) -> Result<()> {
+        self.inner.storage.flush().await
+    }
+
     /// Ask a question, returning a cited answer.
     pub async fn ask(&self, question: &str) -> Result<Answer> {
         self.ask_inner(question, None).await

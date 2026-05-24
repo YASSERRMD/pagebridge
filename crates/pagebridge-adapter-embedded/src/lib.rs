@@ -498,6 +498,10 @@ impl StorageAdapter for EmbeddedAdapter {
         1_000
     }
 
+    async fn flush(&self) -> Result<()> {
+        self.flush_index().await
+    }
+
     async fn get_node(&self, id: &NodeId) -> Result<Option<NodeRecord>> {
         let me = self.clone_handle();
         let id = id.clone();
