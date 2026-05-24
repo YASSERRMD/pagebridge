@@ -170,18 +170,24 @@ async fn summarize_document_parallel(
 ) -> Result<()> {
     let fingerprint = format!("{}:{}", llm.name(), llm.model());
 
-    // Group nodes by depth: deepest first when we iterate.
-    let mut by_depth: BTreeMap<usize, Vec<NodeRecord>> = BTreeMap::new();
-    for n in nodes {
-        by_depth.entry(n.node_id.depth()).or_default().push(n);
-    }
+    let by_depth = group_nodes_by_depth(nodes);
 
     let effective_concurrency = config.effective_concurrency(None).max(1) as usize;
     let semaphore = Arc::new(Semaphore::new(effective_concurrency));
+    tracing::debug!(
+        max_concurrency = effective_concurrency,
+        levels = by_depth.len(),
+        "starting parallel summary fan-out"
+    );
 
-    // Process from deepest depth (highest key) down to root (depth 0).
-    for (_depth, level_nodes) in by_depth.into_iter().rev() {
-        let mut handles = Vec::with_capacity(level_nodes.len());
+    // Process from deepest depth (highest key) down to root (depth 0). The
+    // outer `for` loop is the level barrier: every task at depth N+1 finishes
+    // before any task at depth N starts. This invariant is what guarantees
+    // a parent sees fully persisted child summaries.
+    for (depth, level_nodes) in by_depth.into_iter().rev() {
+        let level_size = level_nodes.len();
+        tracing::trace!(depth, level_size, "summarizing level");
+        let mut handles = Vec::with_capacity(level_size);
         for node in level_nodes {
             let Ok(permit) = semaphore.clone().acquire_owned().await else {
                 break;
@@ -207,6 +213,18 @@ async fn summarize_document_parallel(
         }
     }
     Ok(())
+}
+
+/// Group nodes by tree depth. Returned map is keyed by `node_id.depth()`,
+/// with deeper levels at higher keys. Useful for callers that want to drive
+/// their own per-level pipeline.
+#[must_use]
+pub fn group_nodes_by_depth(nodes: Vec<NodeRecord>) -> BTreeMap<usize, Vec<NodeRecord>> {
+    let mut by_depth: BTreeMap<usize, Vec<NodeRecord>> = BTreeMap::new();
+    for n in nodes {
+        by_depth.entry(n.node_id.depth()).or_default().push(n);
+    }
+    by_depth
 }
 
 async fn summarize_one_node(
