@@ -34,7 +34,7 @@ use std::path::{Path, PathBuf};
 use async_trait::async_trait;
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::llm::{
-    CompletionRequest, CompletionResponse, FinishReason, LlmConfig, LlmProvider,
+    CompletionRequest, CompletionResponse, FinishReason, LlmConfig, LlmProvider, RateLimits,
 };
 
 /// Runtime configuration knobs that are independent of the chosen backend.
@@ -168,6 +168,10 @@ impl LlmProvider for LlamaCppProvider {
     fn estimate_tokens(&self, text: &str) -> usize {
         // Closer-than-default rough heuristic: roughly 1 token per 4 chars.
         text.len().div_ceil(4)
+    }
+
+    fn rate_limits(&self) -> RateLimits {
+        RateLimits::local()
     }
 }
 

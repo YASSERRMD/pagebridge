@@ -38,9 +38,11 @@
 pub mod markdown;
 pub mod pdf;
 pub mod plain;
+pub mod scheduler;
 pub mod tree;
 pub mod worker;
 
+pub use scheduler::DispatchScheduler;
 pub use worker::{SummaryTask, SummaryWorkerConfig};
 
 use std::collections::BTreeMap;
@@ -172,10 +174,18 @@ async fn summarize_document_parallel(
 
     let by_depth = group_nodes_by_depth(nodes);
 
-    let effective_concurrency = config.effective_concurrency(None).max(1) as usize;
+    // Consult the provider's declared rate limits so the scheduler does not
+    // exceed the provider-side concurrent-request cap and so RPM/TPM permits
+    // are awaited before each dispatch.
+    let dispatch = Arc::new(DispatchScheduler::from_limits(
+        llm.rate_limits(),
+        config.max_concurrency,
+    ));
+    let effective_concurrency = dispatch.effective_concurrency as usize;
     let semaphore = Arc::new(Semaphore::new(effective_concurrency));
     tracing::debug!(
         max_concurrency = effective_concurrency,
+        rpm = ?llm.rate_limits().requests_per_minute,
         levels = by_depth.len(),
         "starting parallel summary fan-out"
     );
@@ -192,13 +202,25 @@ async fn summarize_document_parallel(
             let Ok(permit) = semaphore.clone().acquire_owned().await else {
                 break;
             };
+            // Await an RPM permit before scheduling the LLM call. Tokens are
+            // awaited inside summarize_one_node once we know the prompt size.
+            dispatch.await_request_permit().await;
             let storage = Arc::clone(&storage);
             let llm = Arc::clone(&llm);
             let prompts = Arc::clone(&prompts);
             let fingerprint = fingerprint.clone();
+            let dispatch_ref = Arc::clone(&dispatch);
             let handle = tokio::spawn(async move {
                 let _permit = permit;
-                summarize_one_node(&storage, &llm, &prompts, &node, &fingerprint).await
+                summarize_one_node(
+                    &storage,
+                    &llm,
+                    &prompts,
+                    &node,
+                    &fingerprint,
+                    Some(&dispatch_ref),
+                )
+                .await
             });
             handles.push(handle);
         }
@@ -233,6 +255,7 @@ async fn summarize_one_node(
     prompts: &Arc<PromptLibrary>,
     node: &NodeRecord,
     fingerprint: &str,
+    dispatch: Option<&Arc<DispatchScheduler>>,
 ) -> Result<()> {
     if node.is_leaf {
         let mut updated = node.clone();
@@ -274,6 +297,13 @@ async fn summarize_one_node(
             ..PromptContext::default()
         };
         let prompt = prompts.render("summarize", &ctx)?;
+        if let Some(sched) = dispatch {
+            // Pay tokens-per-minute before issuing the request. The estimate
+            // is a lower bound but the limiter naturally backpressures, so a
+            // slight overshoot only costs a few milliseconds of wait.
+            let estimated = u32::try_from(llm.estimate_tokens(&prompt)).unwrap_or(u32::MAX);
+            sched.await_token_permits(estimated).await;
+        }
         let resp = llm
             .complete_json(
                 CompletionRequest {
