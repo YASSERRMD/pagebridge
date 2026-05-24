@@ -838,6 +838,39 @@ impl StorageAdapter for EmbeddedAdapter {
         .map_err(|e| adapter_err("join", e))?
     }
 
+    async fn get_summary_caches_batch(
+        &self,
+        hashes: &[[u8; 32]],
+    ) -> Result<std::collections::HashMap<[u8; 32], SummaryCacheEntry>> {
+        if hashes.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+        let me = self.clone_handle();
+        let hashes_owned: Vec<[u8; 32]> = hashes.to_vec();
+        tokio::task::spawn_blocking(move || {
+            // One read transaction across all lookups so redb only opens the
+            // table once and reuses the snapshot.
+            let tx = me
+                .db
+                .begin_read()
+                .map_err(|e| adapter_err("batch begin read", e))?;
+            let tbl = tx
+                .open_table(SUMMARY_CACHE)
+                .map_err(|e| adapter_err("batch open cache", e))?;
+            let mut out = std::collections::HashMap::with_capacity(hashes_owned.len());
+            for h in &hashes_owned {
+                if let Some(g) = tbl.get(*h).map_err(|e| adapter_err("batch get cache", e))? {
+                    let v: SummaryCacheEntry = bincode::deserialize(g.value().as_slice())
+                        .map_err(|e| PagebridgeError::Serde(format!("decode cache: {e}")))?;
+                    out.insert(*h, v);
+                }
+            }
+            Ok(out)
+        })
+        .await
+        .map_err(|e| adapter_err("batch join", e))?
+    }
+
     async fn upsert_summary_cache(&self, hash: &[u8; 32], entry: &SummaryCacheEntry) -> Result<()> {
         let me = self.clone_handle();
         let hash = *hash;
