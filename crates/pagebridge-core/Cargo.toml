@@ -20,9 +20,10 @@ async-stream.workspace = true
 dashmap.workspace = true
 parking_lot.workspace = true
 tracing.workspace = true
-tokio = { workspace = true, features = ["sync", "macros", "rt"] }
+tokio = { workspace = true, features = ["sync", "macros", "rt", "time"] }
 async-channel = { workspace = true }
 futures-util = { workspace = true }
+governor = { workspace = true }
 pdf-extract.workspace = true
 
 [dev-dependencies]
