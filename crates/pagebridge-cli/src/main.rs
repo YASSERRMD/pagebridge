@@ -311,8 +311,12 @@ async fn main() -> Result<()> {
             let resolved_title = title
                 .or_else(|| file.file_stem().map(|s| s.to_string_lossy().to_string()))
                 .unwrap_or_else(|| "untitled".into());
+
+            // New path: ingest_document_with_progress drives an indicatif
+            // progress bar from the broadcast snapshot stream. Falls back
+            // gracefully to plain text in JSON mode.
             let handle = bridge
-                .ingest_document(IngestParams {
+                .ingest_document_with_progress(IngestParams {
                     title: resolved_title.clone(),
                     source_kind: source,
                     raw_text: raw,
@@ -320,15 +324,41 @@ async fn main() -> Result<()> {
                     user_metadata: std::collections::BTreeMap::default(),
                 })
                 .await?;
-            bridge.wait_for_summaries(&handle.doc_id).await?;
             if cli.json {
-                println!("{}", serde_json::to_string_pretty(&handle)?);
+                let done = handle.wait().await?;
+                println!("{}", serde_json::to_string_pretty(&done)?);
             } else {
+                let bar = indicatif::ProgressBar::new(handle.leaf_count.max(1) as u64);
+                bar.set_style(
+                    indicatif::ProgressStyle::with_template(
+                        "Ingesting {msg}\n  {bar:30.cyan/blue} {pos}/{len} ETA {eta}",
+                    )
+                    .unwrap_or_else(|_| indicatif::ProgressStyle::default_bar()),
+                );
+                bar.set_message(resolved_title.clone());
+                let mut sub = handle.subscribe();
+                let bar_clone = bar.clone();
+                let drain = tokio::spawn(async move {
+                    while let Ok(snap) = sub.recv().await {
+                        bar_clone.set_length(snap.summaries_total.max(1) as u64);
+                        bar_clone.set_position(snap.summaries_done as u64);
+                        if matches!(
+                            snap.stage,
+                            pagebridge_core::IngestStage::Done
+                                | pagebridge_core::IngestStage::Failed
+                        ) {
+                            break;
+                        }
+                    }
+                });
+                let done = handle.wait().await?;
+                drain.abort();
+                bar.finish_and_clear();
                 println!(
                     "ingested {} as {} ({} leaves)",
                     style(resolved_title).bold(),
-                    handle.doc_id,
-                    handle.leaf_count
+                    done.doc_id,
+                    done.leaf_count
                 );
             }
         }

@@ -39,11 +39,13 @@ pub mod batch_writer;
 pub mod markdown;
 pub mod pdf;
 pub mod plain;
+pub mod progress;
 pub mod scheduler;
 pub mod tree;
 pub mod worker;
 
 pub use batch_writer::{BatchWriterConfig, WriterStats};
+pub use progress::{IngestStage, ProgressSnapshot, ProgressTracker};
 pub use scheduler::DispatchScheduler;
 pub use worker::{SummaryTask, SummaryWorkerConfig};
 
@@ -119,10 +121,31 @@ pub async fn ingest_with_config(
     params: IngestParams,
     worker_config: SummaryWorkerConfig,
 ) -> Result<(DocumentHandle, JoinHandle<Result<()>>)> {
+    ingest_with_progress(storage, llm, prompts, params, worker_config, None).await
+}
+
+/// Drive ingestion with both worker tuning and an optional shared
+/// [`ProgressTracker`]. When the tracker is `Some`, every worker reports
+/// counters into it so callers can render real-time progress.
+pub async fn ingest_with_progress(
+    storage: Arc<dyn StorageAdapter>,
+    llm: Arc<dyn LlmProvider>,
+    prompts: Arc<PromptLibrary>,
+    params: IngestParams,
+    worker_config: SummaryWorkerConfig,
+    progress: Option<Arc<ProgressTracker>>,
+) -> Result<(DocumentHandle, JoinHandle<Result<()>>)> {
     let start = now_ms();
+    if let Some(p) = &progress {
+        p.set_stage(IngestStage::Parsing);
+    }
     let built = build_structural(&params)?;
     let root_node_id = NodeId::root(&built.doc_id);
     let doc_id = built.doc_id.clone();
+    if let Some(p) = &progress {
+        p.note_total_nodes(u32::try_from(built.nodes.len()).unwrap_or(u32::MAX));
+        p.set_stage(IngestStage::StructuralInsert);
+    }
 
     // Use the explicit batch API so storage backends collapse 250 inserts
     // into one transaction (50-100x faster on SQLite/Postgres).
@@ -139,6 +162,10 @@ pub async fn ingest_with_config(
             byte_count: built.byte_count,
         })
         .await?;
+    if let Some(p) = &progress {
+        p.note_structural_done();
+        p.set_stage(IngestStage::Summarizing);
+    }
 
     let handle = DocumentHandle {
         doc_id: doc_id.clone(),
@@ -152,8 +179,25 @@ pub async fn ingest_with_config(
     let llm2 = Arc::clone(&llm);
     let prompts2 = Arc::clone(&prompts);
     let nodes = built.nodes;
+    let progress_for_task = progress.clone();
     let join = tokio::spawn(async move {
-        summarize_document_parallel(storage2, llm2, prompts2, nodes, worker_config).await
+        let r = summarize_document_parallel(
+            storage2,
+            llm2,
+            prompts2,
+            nodes,
+            worker_config,
+            progress_for_task.clone(),
+        )
+        .await;
+        if let Some(p) = progress_for_task {
+            p.set_stage(if r.is_ok() {
+                IngestStage::Done
+            } else {
+                IngestStage::Failed
+            });
+        }
+        r
     });
 
     Ok((handle, join))
@@ -173,6 +217,7 @@ async fn summarize_document_parallel(
     prompts: Arc<PromptLibrary>,
     nodes: Vec<NodeRecord>,
     config: SummaryWorkerConfig,
+    progress: Option<Arc<ProgressTracker>>,
 ) -> Result<()> {
     let fingerprint = format!("{}:{}", llm.name(), llm.model());
 
@@ -226,8 +271,12 @@ async fn summarize_document_parallel(
             let dispatch_ref = Arc::clone(&dispatch);
             let writer_tx = writer_tx.clone();
             let task_timeout = std::time::Duration::from_millis(config.timeout_per_task_ms);
+            let progress_for_task = progress.clone();
             let handle = tokio::spawn(async move {
                 let _permit = permit;
+                if let Some(p) = &progress_for_task {
+                    p.note_llm_dispatched();
+                }
                 let fut = summarize_one_node(
                     &storage,
                     &llm,
@@ -237,12 +286,23 @@ async fn summarize_document_parallel(
                     Some(&dispatch_ref),
                     Some(&writer_tx),
                 );
-                match tokio::time::timeout(task_timeout, fut).await {
-                    Ok(r) => r,
+                let outcome = tokio::time::timeout(task_timeout, fut).await;
+                match outcome {
+                    Ok(r) => {
+                        if let Some(p) = &progress_for_task {
+                            p.note_llm_completed(r.is_ok());
+                            p.broadcast();
+                        }
+                        r
+                    }
                     Err(_) => {
                         // Per-task timeout fired. Note as a soft throttle so
                         // the scheduler backs off if these repeat.
                         dispatch_ref.note_throttle();
+                        if let Some(p) = &progress_for_task {
+                            p.note_llm_completed(false);
+                            p.broadcast();
+                        }
                         tracing::warn!(
                             timeout_ms = task_timeout.as_millis() as u64,
                             "summary task per-call timeout exceeded"
