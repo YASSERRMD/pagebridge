@@ -514,6 +514,8 @@ impl StorageAdapter for SqliteAdapter {
                 root_node_id: NodeId::new(root_node_id)?,
                 leaf_count: leaf_count as u32,
                 byte_count: byte_count as u64,
+                raw_text_hash: None,
+                structural_hash: None,
             });
         }
         Ok(out)

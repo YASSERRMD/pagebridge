@@ -158,6 +158,34 @@ pub struct DocumentEntry {
     pub root_node_id: NodeId,
     pub leaf_count: u32,
     pub byte_count: u64,
+    /// Sha256 over the document's raw text. `None` for entries written by
+    /// pre-Phase-I8 ingests. Populated by [`crate::ingest`] so re-ingest
+    /// fast-paths can compare without walking the tree.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_text_hash: Option<[u8; 32]>,
+    /// Sha256 over the structural skeleton (titles + levels + parent edges)
+    /// for the document. `None` for legacy entries; populated by Phase I8.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub structural_hash: Option<[u8; 32]>,
+}
+
+/// Prediction returned by [`crate::Pagebridge::would_reingest_change`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ReingestPrediction {
+    /// Both raw-text and structural hash match the stored document; re-ingest
+    /// will be a no-op.
+    NoChange,
+    /// Structural hash differs but raw-text hash matches (rare: parser
+    /// version bump, etc).
+    StructuralOnly { changed_node_count: u32 },
+    /// Raw text differs but leaf-level diff shows most content unchanged.
+    PartialContent {
+        changed_leaf_count: u32,
+        total_leaves: u32,
+    },
+    /// Document is unknown or differs entirely; full re-ingest will run.
+    FullChange,
 }
 
 /// One hit from a BM25 search. Scores are always "higher is more relevant".
