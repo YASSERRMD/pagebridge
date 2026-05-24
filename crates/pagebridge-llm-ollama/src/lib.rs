@@ -21,7 +21,7 @@ use futures::StreamExt;
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::llm::{
     CompletionRequest, CompletionResponse, CompletionStream, FinishReason, LlmConfig, LlmProvider,
-    StreamChunk,
+    RateLimits, StreamChunk,
 };
 use serde::{Deserialize, Serialize};
 
@@ -181,6 +181,10 @@ impl LlmProvider for OllamaProvider {
     }
     fn supports_grammar(&self) -> bool {
         false
+    }
+
+    fn rate_limits(&self) -> RateLimits {
+        RateLimits::local()
     }
 }
 
