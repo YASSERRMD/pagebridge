@@ -28,7 +28,10 @@ pub use audit_hook::{
     IngestAuditFields, NoopAuditHook, NoopReceiptIssuer, ReceiptIssuanceInputs, ReceiptIssuer,
 };
 pub use facade::{Pagebridge, PagebridgeOptions};
-pub use ingest::{BatchWriterConfig, SummaryTask, SummaryWorkerConfig, WriterStats};
+pub use ingest::{
+    BatchWriterConfig, IngestStage, ProgressSnapshot, ProgressTracker, SummaryTask,
+    SummaryWorkerConfig, WriterStats,
+};
 
 pub use adapter::StorageAdapter;
 pub use error::{PagebridgeError, Result};
