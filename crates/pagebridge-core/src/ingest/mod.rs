@@ -147,9 +147,24 @@ pub async fn ingest_with_progress(
         p.set_stage(IngestStage::StructuralInsert);
     }
 
+    // Preserve prior summaries on re-ingest. The structural builder always
+    // emits empty summaries; if the same node_id already exists with a
+    // populated summary + source_hash, the pre-flight cache lookup downstream
+    // can use that hash to skip the LLM call entirely.
+    let mut preserved = built.nodes;
+    for n in preserved.iter_mut() {
+        if !n.is_leaf {
+            if let Ok(Some(prev)) = storage.get_node(&n.node_id).await {
+                if prev.source_hash != [0u8; 32] {
+                    n.source_hash = prev.source_hash;
+                }
+            }
+        }
+    }
+
     // Use the explicit batch API so storage backends collapse 250 inserts
     // into one transaction (50-100x faster on SQLite/Postgres).
-    storage.upsert_nodes_batch(&built.nodes).await?;
+    storage.upsert_nodes_batch(&preserved).await?;
     storage.put_raw(&doc_id, &params.raw_text).await?;
     storage
         .upsert_document(&DocumentEntry {
@@ -178,7 +193,7 @@ pub async fn ingest_with_progress(
     let storage2 = Arc::clone(&storage);
     let llm2 = Arc::clone(&llm);
     let prompts2 = Arc::clone(&prompts);
-    let nodes = built.nodes;
+    let nodes = preserved;
     let progress_for_task = progress.clone();
     let join = tokio::spawn(async move {
         let r = summarize_document_parallel(
