@@ -38,20 +38,12 @@ pub use pagebridge_adapter_sqlite::SqliteAdapter;
 
 #[cfg(feature = "admin")]
 pub use pagebridge_admin as admin;
-#[cfg(feature = "mcp")]
-pub use pagebridge_mcp as mcp;
-#[cfg(feature = "obs")]
-pub use pagebridge_obs as obs;
 #[cfg(feature = "auth")]
 pub use pagebridge_auth as auth;
-#[cfg(feature = "vision")]
-pub use pagebridge_vision as vision;
-#[cfg(feature = "links")]
-pub use pagebridge_links as links;
 #[cfg(feature = "eval")]
 pub use pagebridge_eval as eval;
-#[cfg(feature = "plugin")]
-pub use pagebridge_plugin_abi as plugin;
+#[cfg(feature = "links")]
+pub use pagebridge_links as links;
 #[cfg(feature = "anthropic")]
 pub use pagebridge_llm_anthropic::AnthropicProvider;
 #[cfg(feature = "llamacpp")]
@@ -60,6 +52,14 @@ pub use pagebridge_llm_llamacpp::{LlamaCppConfig, LlamaCppProvider};
 pub use pagebridge_llm_ollama::OllamaProvider;
 #[cfg(feature = "openai")]
 pub use pagebridge_llm_openai::OpenAiCompatibleProvider;
+#[cfg(feature = "mcp")]
+pub use pagebridge_mcp as mcp;
+#[cfg(feature = "obs")]
+pub use pagebridge_obs as obs;
+#[cfg(feature = "plugin")]
+pub use pagebridge_plugin_abi as plugin;
+#[cfg(feature = "vision")]
+pub use pagebridge_vision as vision;
 
 use std::sync::Arc;
 

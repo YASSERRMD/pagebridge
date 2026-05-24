@@ -2,7 +2,15 @@
 //! alternate configuration, compare outcomes, and report whether the
 //! candidate is ready to promote.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_lossless
+)]
 
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -82,8 +90,11 @@ impl ShadowAggregator {
             };
         }
         let n = g.len() as f32;
-        let mean_score: f32 =
-            g.iter().map(|s| s.candidate_score - s.baseline_score).sum::<f32>() / n;
+        let mean_score: f32 = g
+            .iter()
+            .map(|s| s.candidate_score - s.baseline_score)
+            .sum::<f32>()
+            / n;
         let mean_lat: f32 = g
             .iter()
             .map(|s| s.candidate_latency_ms as f32 - s.baseline_latency_ms as f32)

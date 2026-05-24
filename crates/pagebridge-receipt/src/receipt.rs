@@ -194,11 +194,7 @@ mod tests {
         let sig =
             ed25519_dalek::Signature::from_slice(&hex::decode(&receipt.signature_hex).unwrap())
                 .unwrap();
-        let v = ed25519_dalek::Verifier::verify(
-            &secret.signing.verifying_key(),
-            &digest,
-            &sig,
-        );
+        let v = ed25519_dalek::Verifier::verify(&secret.signing.verifying_key(), &digest, &sig);
         assert!(v.is_err());
     }
 
@@ -215,6 +211,9 @@ mod tests {
             content_hash_hex: "ff".into(),
             version: 1,
         };
-        assert_eq!(corpus_root_of(&[a.clone(), b.clone()]), corpus_root_of(&[b, a]));
+        assert_eq!(
+            corpus_root_of(&[a.clone(), b.clone()]),
+            corpus_root_of(&[b, a])
+        );
     }
 }

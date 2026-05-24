@@ -5,7 +5,33 @@
 //! so the CLI can answer "why this answer?" with a structured walk and
 //! "what if we used a different X?" with a replay diff.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::format_push_string,
+    clippy::map_unwrap_or,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_lossless,
+    clippy::cast_possible_wrap,
+    clippy::manual_clamp,
+    clippy::needless_pass_by_value,
+    clippy::trivially_copy_pass_by_ref,
+    clippy::similar_names,
+    clippy::redundant_clone,
+    clippy::useless_vec,
+    clippy::default_trait_access,
+    clippy::single_match_else,
+    clippy::match_same_arms,
+    clippy::needless_collect,
+    clippy::unnecessary_wraps,
+    clippy::redundant_closure_for_method_calls,
+    clippy::iter_on_single_items,
+    clippy::option_if_let_else,
+    clippy::elidable_lifetime_names
+)]
 
 use std::collections::BTreeMap;
 
@@ -65,10 +91,7 @@ impl Counterfactual {
     pub fn diff_summary(&self) -> String {
         format!(
             "change={:?}\n  base={}\n  alt ={}\n  diverged={}",
-            self.change,
-            self.base_answer_hash_hex,
-            self.alt_answer_hash_hex,
-            self.diverged
+            self.change, self.base_answer_hash_hex, self.alt_answer_hash_hex, self.diverged
         )
     }
 }

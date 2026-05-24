@@ -150,14 +150,8 @@ pub async fn get_node(pool: &Pool, id: &NodeId) -> Result<Option<NodeRecord>> {
     row.map(row_to_node).transpose()
 }
 
-pub async fn children_summaries(
-    pool: &Pool,
-    parent: &NodeId,
-) -> Result<Vec<NodeSummary>> {
-    let mut conn = pool
-        .get_conn()
-        .await
-        .map_err(|e| err("children conn", e))?;
+pub async fn children_summaries(pool: &Pool, parent: &NodeId) -> Result<Vec<NodeSummary>> {
+    let mut conn = pool.get_conn().await.map_err(|e| err("children conn", e))?;
     let rows: Vec<(String, Option<String>, String, u8, String, i8)> =
         "SELECT node_id, parent_id, title, level, routing_summary, is_leaf
          FROM pagebridge_nodes WHERE parent_id = :parent ORDER BY node_id"
@@ -338,12 +332,7 @@ pub async fn search(
     Ok(out)
 }
 
-pub async fn put_raw(
-    pool: &Pool,
-    doc_id: &DocId,
-    data: &[u8],
-    chunk_limit: usize,
-) -> Result<u64> {
+pub async fn put_raw(pool: &Pool, doc_id: &DocId, data: &[u8], chunk_limit: usize) -> Result<u64> {
     let mut conn = pool.get_conn().await.map_err(|e| err("raw conn", e))?;
     let end: Option<i64> = "SELECT COALESCE(MAX(offset_start + length), 0)
          FROM pagebridge_raw WHERE doc_id = :d"
@@ -373,29 +362,24 @@ pub async fn put_raw(
     Ok(start_u64)
 }
 
-pub async fn read_raw_span(
-    pool: &Pool,
-    doc_id: &DocId,
-    span: (u64, u64),
-) -> Result<Vec<u8>> {
+pub async fn read_raw_span(pool: &Pool, doc_id: &DocId, span: (u64, u64)) -> Result<Vec<u8>> {
     if span.0 > span.1 {
         return Err(PagebridgeError::InvalidArgument(format!(
             "span {span:?} start > end"
         )));
     }
     let mut conn = pool.get_conn().await.map_err(|e| err("raw read conn", e))?;
-    let rows: Vec<(i64, Vec<u8>)> =
-        "SELECT offset_start, data FROM pagebridge_raw
+    let rows: Vec<(i64, Vec<u8>)> = "SELECT offset_start, data FROM pagebridge_raw
          WHERE doc_id = :d AND offset_start + length > :a AND offset_start < :b
          ORDER BY offset_start"
-            .with(params! {
-                "d" => doc_id.as_str(),
-                "a" => span.0 as i64,
-                "b" => span.1 as i64,
-            })
-            .fetch(&mut conn)
-            .await
-            .map_err(|e| err("read raw", e))?;
+        .with(params! {
+            "d" => doc_id.as_str(),
+            "a" => span.0 as i64,
+            "b" => span.1 as i64,
+        })
+        .fetch(&mut conn)
+        .await
+        .map_err(|e| err("read raw", e))?;
     let mut out = Vec::with_capacity((span.1 - span.0) as usize);
     for (ofs, data) in rows {
         let cs = ofs as u64;
@@ -416,10 +400,7 @@ pub async fn read_raw_span(
     Ok(out)
 }
 
-pub async fn get_summary_cache(
-    pool: &Pool,
-    hash: &[u8; 32],
-) -> Result<Option<SummaryCacheEntry>> {
+pub async fn get_summary_cache(pool: &Pool, hash: &[u8; 32]) -> Result<Option<SummaryCacheEntry>> {
     let mut conn = pool.get_conn().await.map_err(|e| err("cache conn", e))?;
     let row: Option<Vec<u8>> = "SELECT entry FROM pagebridge_summary_cache WHERE source_hash = :h"
         .with(params! { "h" => hash.to_vec() })

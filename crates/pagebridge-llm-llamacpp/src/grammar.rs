@@ -124,10 +124,7 @@ impl State {
             }
         }
         let name = self.fresh("object");
-        let body = format!(
-            "\"{{\" ws {} ws \"}}\"",
-            parts.join(" ws \",\" ws ")
-        );
+        let body = format!("\"{{\" ws {} ws \"}}\"", parts.join(" ws \",\" ws "));
         self.rules.push((name.clone(), body));
         name
     }

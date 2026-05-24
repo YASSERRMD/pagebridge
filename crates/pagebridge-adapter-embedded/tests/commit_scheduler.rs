@@ -1,5 +1,25 @@
 //! Verifies the lazy tantivy commit scheduler.
 
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_lossless,
+    clippy::missing_const_for_fn,
+    clippy::format_push_string,
+    clippy::redundant_clone,
+    clippy::needless_pass_by_value,
+    clippy::elidable_lifetime_names,
+    clippy::manual_let_else,
+    clippy::if_not_else,
+    clippy::single_match_else,
+    clippy::doc_markdown,
+    clippy::module_name_repetitions,
+    clippy::too_many_lines,
+    clippy::similar_names,
+    clippy::needless_borrows_for_generic_args
+)]
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -68,7 +88,10 @@ async fn search_invisible_until_flush_with_high_thresholds() {
         store.upsert_node(&make_leaf(&doc, &root, i)).await.unwrap();
     }
     // No commit yet (threshold = 10k docs, age = 1h) so BM25 sees nothing.
-    let hits = store.bm25_search("pagebridgesearchneedle", 10).await.unwrap();
+    let hits = store
+        .bm25_search("pagebridgesearchneedle", 10)
+        .await
+        .unwrap();
     assert!(
         hits.is_empty(),
         "expected zero hits before flush, got {}",
@@ -76,7 +99,10 @@ async fn search_invisible_until_flush_with_high_thresholds() {
     );
     // Force a flush; now search must see the leaves.
     store.flush().await.unwrap();
-    let hits = store.bm25_search("pagebridgesearchneedle", 10).await.unwrap();
+    let hits = store
+        .bm25_search("pagebridgesearchneedle", 10)
+        .await
+        .unwrap();
     assert!(
         !hits.is_empty(),
         "expected hits after flush, got {}",
@@ -100,6 +126,9 @@ async fn dirty_count_threshold_triggers_commit() {
         store.upsert_node(&make_leaf(&doc, &root, i)).await.unwrap();
     }
     // After the 5th leaf the scheduler commits automatically.
-    let hits = store.bm25_search("pagebridgesearchneedle", 10).await.unwrap();
+    let hits = store
+        .bm25_search("pagebridgesearchneedle", 10)
+        .await
+        .unwrap();
     assert!(!hits.is_empty(), "expected auto-commit at threshold");
 }

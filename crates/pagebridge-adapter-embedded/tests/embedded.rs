@@ -109,8 +109,8 @@ async fn roundtrip_and_persistence() {
                 root_node_id: NodeId::root(&doc),
                 leaf_count: 2,
                 byte_count: 0,
-            raw_text_hash: None,
-            structural_hash: None,
+                raw_text_hash: None,
+                structural_hash: None,
             })
             .await
             .unwrap();

@@ -214,9 +214,8 @@ pub async fn children_summaries(pool: &MsPool, parent: &NodeId) -> Result<Vec<No
 
 pub async fn children_records(pool: &MsPool, parent: &NodeId) -> Result<Vec<NodeRecord>> {
     let mut conn = pool.get().await.map_err(|e| err("child rec conn", e))?;
-    let sql = format!(
-        "SELECT {NODE_COLS} FROM pagebridge_nodes WHERE parent_id = @P1 ORDER BY node_id"
-    );
+    let sql =
+        format!("SELECT {NODE_COLS} FROM pagebridge_nodes WHERE parent_id = @P1 ORDER BY node_id");
     let mut q = Query::new(sql);
     q.bind(parent.as_str());
     let rows = q
@@ -402,7 +401,8 @@ pub async fn put_raw(
     chunk_limit: usize,
 ) -> Result<u64> {
     let mut conn = pool.get().await.map_err(|e| err("raw conn", e))?;
-    let sql = "SELECT COALESCE(MAX(offset_start + length), 0) FROM pagebridge_raw WHERE doc_id = @P1";
+    let sql =
+        "SELECT COALESCE(MAX(offset_start + length), 0) FROM pagebridge_raw WHERE doc_id = @P1";
     let mut q = Query::new(sql);
     q.bind(doc_id.as_str());
     let rows = q
@@ -441,11 +441,7 @@ pub async fn put_raw(
     Ok(start_u64)
 }
 
-pub async fn read_raw_span(
-    pool: &MsPool,
-    doc_id: &DocId,
-    span: (u64, u64),
-) -> Result<Vec<u8>> {
+pub async fn read_raw_span(pool: &MsPool, doc_id: &DocId, span: (u64, u64)) -> Result<Vec<u8>> {
     if span.0 > span.1 {
         return Err(PagebridgeError::InvalidArgument(format!(
             "span {span:?} start > end"
@@ -548,10 +544,22 @@ pub async fn stats(pool: &MsPool) -> Result<AdapterStats> {
         .await
         .map_err(|e| err("stats rows", e))?;
     let first = rows.first().ok_or_else(|| err("stats", "no row"))?;
-    let nodes = first.try_get::<i64, _>(0).map_err(|e| err("nodes", e))?.unwrap_or(0);
-    let docs = first.try_get::<i64, _>(1).map_err(|e| err("docs", e))?.unwrap_or(0);
-    let raw = first.try_get::<i64, _>(2).map_err(|e| err("raw", e))?.unwrap_or(0);
-    let cache = first.try_get::<i64, _>(3).map_err(|e| err("cache", e))?.unwrap_or(0);
+    let nodes = first
+        .try_get::<i64, _>(0)
+        .map_err(|e| err("nodes", e))?
+        .unwrap_or(0);
+    let docs = first
+        .try_get::<i64, _>(1)
+        .map_err(|e| err("docs", e))?
+        .unwrap_or(0);
+    let raw = first
+        .try_get::<i64, _>(2)
+        .map_err(|e| err("raw", e))?
+        .unwrap_or(0);
+    let cache = first
+        .try_get::<i64, _>(3)
+        .map_err(|e| err("cache", e))?
+        .unwrap_or(0);
     Ok(AdapterStats {
         node_count: nodes as u64,
         document_count: docs as u64,

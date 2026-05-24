@@ -84,5 +84,8 @@ async fn ask_stream_emits_tokens_and_citations() {
     assert!(saw_done, "stream ended without Done chunk");
     assert!(citation_count >= 1, "expected at least one citation event");
     assert!(tokens.contains("Rollout"), "tokens missing: {tokens}");
-    assert!(!tokens.contains("[[CITE:"), "marker leaked into text: {tokens}");
+    assert!(
+        !tokens.contains("[[CITE:"),
+        "marker leaked into text: {tokens}"
+    );
 }

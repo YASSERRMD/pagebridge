@@ -10,12 +10,7 @@ pub struct ScoreTriple {
 
 #[async_trait]
 pub trait Judge: Send + Sync + 'static {
-    async fn score(
-        &self,
-        question: &str,
-        answer: &str,
-        cited_excerpts: &[String],
-    ) -> ScoreTriple;
+    async fn score(&self, question: &str, answer: &str, cited_excerpts: &[String]) -> ScoreTriple;
 }
 
 /// Test/dev judge that returns a deterministic mid-range score so the
@@ -24,12 +19,7 @@ pub struct NoopJudge;
 
 #[async_trait]
 impl Judge for NoopJudge {
-    async fn score(
-        &self,
-        _question: &str,
-        answer: &str,
-        excerpts: &[String],
-    ) -> ScoreTriple {
+    async fn score(&self, _question: &str, answer: &str, excerpts: &[String]) -> ScoreTriple {
         let answer_len = answer.len() as f32;
         let excerpts_len: f32 = excerpts.iter().map(|s| s.len() as f32).sum();
         // Synthetic but stable: longer cited content -> higher faithfulness.

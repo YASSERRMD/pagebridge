@@ -6,7 +6,25 @@
 //! content hashes. Re-running `pagebridge build --manifest <m.json>`
 //! with the same recipe reproduces byte-identical artifacts.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::iter_on_single_items,
+    clippy::needless_collect,
+    clippy::too_long_first_doc_paragraph,
+    clippy::match_same_arms,
+    clippy::redundant_clone,
+    clippy::needless_pass_by_value,
+    clippy::default_trait_access,
+    clippy::useless_vec,
+    clippy::unnecessary_wraps,
+    clippy::single_match_else,
+    clippy::trivially_copy_pass_by_ref,
+    clippy::cast_possible_truncation,
+    clippy::cast_lossless,
+    clippy::cast_precision_loss
+)]
 
 use std::collections::BTreeMap;
 
@@ -21,7 +39,11 @@ pub enum BuildError {
     #[error("serde: {0}")]
     Serde(#[from] serde_json::Error),
     #[error("artifact mismatch: {path} expected {expected}, got {actual}")]
-    Mismatch { path: String, expected: String, actual: String },
+    Mismatch {
+        path: String,
+        expected: String,
+        actual: String,
+    },
     #[error("internal: {0}")]
     Internal(String),
 }
@@ -109,8 +131,11 @@ pub fn diff(a: &BuildManifest, b: &BuildManifest) -> Vec<String> {
             a.pagebridge_version, b.pagebridge_version
         ));
     }
-    let keys: std::collections::BTreeSet<&String> =
-        a.prompt_versions.keys().chain(b.prompt_versions.keys()).collect();
+    let keys: std::collections::BTreeSet<&String> = a
+        .prompt_versions
+        .keys()
+        .chain(b.prompt_versions.keys())
+        .collect();
     for k in keys {
         let av = a.prompt_versions.get(k).copied();
         let bv = b.prompt_versions.get(k).copied();

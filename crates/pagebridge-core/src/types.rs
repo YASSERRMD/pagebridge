@@ -1,5 +1,7 @@
 //! Supporting types: ingest params, document entries, search hits, answers, traces.
 
+#![allow(clippy::missing_const_for_fn)]
+
 use std::collections::BTreeMap;
 
 use crate::id::{DocId, NodeId};

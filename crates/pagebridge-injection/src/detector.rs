@@ -73,6 +73,8 @@ mod tests {
     #[test]
     fn clean_text_does_not_trigger() {
         let d = InstructionDetector::new();
-        assert!(d.detect("The carbon policy applies to all vehicles registered after 2024.").is_empty());
+        assert!(d
+            .detect("The carbon policy applies to all vehicles registered after 2024.")
+            .is_empty());
     }
 }

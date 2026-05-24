@@ -559,6 +559,7 @@ impl StorageAdapter for MongoAdapter {
         &self,
         hashes: &[[u8; 32]],
     ) -> Result<std::collections::HashMap<[u8; 32], SummaryCacheEntry>> {
+        use futures::TryStreamExt;
         if hashes.is_empty() {
             return Ok(std::collections::HashMap::new());
         }
@@ -577,32 +578,22 @@ impl StorageAdapter for MongoAdapter {
             .await
             .map_err(|e| err("batch get_summary_cache", e))?;
         let mut out = std::collections::HashMap::with_capacity(hashes.len());
-        use futures::TryStreamExt;
-        while let Some(d) = cursor
-            .try_next()
-            .await
-            .map_err(|e| err("cursor next", e))?
-        {
+        while let Some(d) = cursor.try_next().await.map_err(|e| err("cursor next", e))? {
             let id_bson = d.get("_id").ok_or_else(|| err("col _id", "missing"))?;
-            let hbytes = if let Bson::Binary(Binary { bytes, .. }) = id_bson {
-                bytes.clone()
-            } else {
+            let Bson::Binary(Binary { bytes: hbytes, .. }) = id_bson else {
                 continue;
             };
-            let mut harr = [0u8; 32];
-            if hbytes.len() == 32 {
-                harr.copy_from_slice(&hbytes);
-            } else {
+            if hbytes.len() != 32 {
                 continue;
             }
+            let mut harr = [0u8; 32];
+            harr.copy_from_slice(hbytes);
             let entry_bson = d.get("entry").ok_or_else(|| err("col entry", "missing"))?;
-            let bytes = if let Bson::Binary(Binary { bytes, .. }) = entry_bson {
-                bytes.clone()
-            } else {
+            let Bson::Binary(Binary { bytes, .. }) = entry_bson else {
                 continue;
             };
             let entry: SummaryCacheEntry =
-                serde_json::from_slice(&bytes).map_err(|e| err("decode cache", e))?;
+                serde_json::from_slice(bytes).map_err(|e| err("decode cache", e))?;
             out.insert(harr, entry);
         }
         Ok(out)

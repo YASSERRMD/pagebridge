@@ -24,31 +24,38 @@
 #![allow(
     clippy::missing_errors_doc,
     clippy::module_name_repetitions,
-    clippy::missing_panics_doc
+    clippy::missing_panics_doc,
+    clippy::needless_raw_string_hashes,
+    clippy::empty_line_after_doc_comments,
+    clippy::missing_const_for_fn,
+    clippy::significant_drop_tightening,
+    clippy::match_same_arms,
+    clippy::too_long_first_doc_paragraph,
+    clippy::assigning_clones,
+    clippy::cast_possible_truncation,
+    clippy::unnecessary_literal_bound,
+    clippy::default_trait_access,
+    clippy::redundant_clone
 )]
 
 pub mod error;
 pub mod event;
 pub mod facade_hook;
 pub mod merkle;
-pub mod sign;
 pub mod schema;
+pub mod sign;
 pub mod sinks;
 pub mod transparency;
 pub mod verifier;
 pub mod writer;
 
 pub use error::{AuditError, Result};
-pub use event::{
-    AuditAction, AuditEvent, AuditOutcome, AuditResource, PolicyDecision, Principal,
-};
+pub use event::{AuditAction, AuditEvent, AuditOutcome, AuditResource, PolicyDecision, Principal};
 pub use facade_hook::FacadeAuditHook;
 pub use merkle::{
     merkle_proof, merkle_root, verify_inclusion, InclusionProof, MerkleBatch, ProofNode,
 };
-pub use sign::{
-    canonical_event_hash, seal_event, verify_event, SignatureVerifier, SigningSecret,
-};
+pub use sign::{canonical_event_hash, seal_event, verify_event, SignatureVerifier, SigningSecret};
 pub use transparency::{NoopTransparencyClient, TransparencyClient, TrillianEntry};
 pub use verifier::{replay_chain, verify_batch, ReplayReport};
 pub use writer::{AuditSink, AuditWriter, WriterConfig};

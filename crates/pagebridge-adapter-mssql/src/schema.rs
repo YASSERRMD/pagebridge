@@ -89,7 +89,8 @@ const STATEMENTS: &[&str] = &[
      END",
 ];
 
-const FT_CATALOG: &str = "IF NOT EXISTS (SELECT 1 FROM sys.fulltext_catalogs WHERE name = 'pagebridge_ft')
+const FT_CATALOG: &str =
+    "IF NOT EXISTS (SELECT 1 FROM sys.fulltext_catalogs WHERE name = 'pagebridge_ft')
     CREATE FULLTEXT CATALOG pagebridge_ft AS DEFAULT;";
 
 const FT_INDEX: &str = "IF NOT EXISTS (SELECT 1 FROM sys.fulltext_indexes

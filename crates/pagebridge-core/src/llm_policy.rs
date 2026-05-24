@@ -6,6 +6,20 @@
 //!  - honors a Retry-After hint if the error carries one,
 //!  - aborts and trips the circuit when sustained failure crosses a threshold.
 
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_lossless,
+    clippy::too_long_first_doc_paragraph,
+    clippy::missing_errors_doc,
+    clippy::missing_const_for_fn,
+    clippy::module_name_repetitions,
+    clippy::match_same_arms,
+    clippy::significant_drop_in_scrutinee,
+    clippy::needless_pass_by_value
+)]
+
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};

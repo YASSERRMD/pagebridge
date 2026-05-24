@@ -247,9 +247,8 @@ pub async fn collect_stream(
             }
         }
     }
-    let trace = trace.ok_or_else(|| {
-        PagebridgeError::Internal("stream ended without Done chunk".into())
-    })?;
+    let trace =
+        trace.ok_or_else(|| PagebridgeError::Internal("stream ended without Done chunk".into()))?;
     Ok(crate::types::Answer {
         text,
         citations,

@@ -4,15 +4,18 @@
 //! Supports text completion plus inline images for vision-capable models
 //! (gemini-2.0-flash, gemini-2.0-pro).
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::cast_possible_truncation
+)]
 
 use async_trait::async_trait;
 use serde_json::json;
 
 use pagebridge_core::error::{PagebridgeError, Result};
-use pagebridge_core::llm::{
-    CompletionRequest, CompletionResponse, FinishReason, LlmProvider,
-};
+use pagebridge_core::llm::{CompletionRequest, CompletionResponse, FinishReason, LlmProvider};
 
 #[derive(Debug, Clone)]
 pub struct GeminiProvider {
@@ -56,12 +59,16 @@ impl LlmProvider for GeminiProvider {
                 "maxOutputTokens": req.max_tokens.unwrap_or(1024),
             }
         });
-        let resp = self.client.post(&url).json(&body).send().await.map_err(|e| {
-            PagebridgeError::Llm {
+        let resp = self
+            .client
+            .post(&url)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| PagebridgeError::Llm {
                 provider: "google".into(),
                 message: format!("send: {e}"),
-            }
-        })?;
+            })?;
         if !resp.status().is_success() {
             return Err(PagebridgeError::Llm {
                 provider: "google".into(),
@@ -76,10 +83,10 @@ impl LlmProvider for GeminiProvider {
             .as_str()
             .unwrap_or("")
             .to_string();
-        let input_tokens =
-            v["usageMetadata"]["promptTokenCount"].as_u64().unwrap_or(0) as u32;
-        let output_tokens =
-            v["usageMetadata"]["candidatesTokenCount"].as_u64().unwrap_or(0) as u32;
+        let input_tokens = v["usageMetadata"]["promptTokenCount"].as_u64().unwrap_or(0) as u32;
+        let output_tokens = v["usageMetadata"]["candidatesTokenCount"]
+            .as_u64()
+            .unwrap_or(0) as u32;
         Ok(CompletionResponse {
             text,
             input_tokens,

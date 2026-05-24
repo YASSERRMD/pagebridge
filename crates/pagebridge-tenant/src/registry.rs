@@ -7,7 +7,9 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
-use crate::limit::{LimitDecision, RateLimit, TenantLimits, TokenBucket};
+#[cfg(test)]
+use crate::limit::RateLimit;
+use crate::limit::{LimitDecision, TenantLimits, TokenBucket};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TenantStats {
@@ -145,7 +147,10 @@ mod tests {
         r.upsert(
             "acme",
             TenantLimits {
-                requests: Some(RateLimit { capacity: 2, refill_per_sec: 1 }),
+                requests: Some(RateLimit {
+                    capacity: 2,
+                    refill_per_sec: 1,
+                }),
                 ..Default::default()
             },
         );

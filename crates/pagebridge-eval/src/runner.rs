@@ -46,12 +46,11 @@ async fn run_one(q: &EvalQuestion, bridge: &Pagebridge) -> Result<EvalResult> {
 pub fn results_to_csv(results: &[EvalResult]) -> Result<String> {
     let mut wtr = csv::Writer::from_writer(Vec::new());
     for r in results {
-        wtr.serialize(r).map_err(|e| {
-            pagebridge_core::error::PagebridgeError::Internal(format!("csv: {e}"))
-        })?;
+        wtr.serialize(r)
+            .map_err(|e| pagebridge_core::error::PagebridgeError::Internal(format!("csv: {e}")))?;
     }
-    let bytes = wtr.into_inner().map_err(|e| {
-        pagebridge_core::error::PagebridgeError::Internal(format!("csv: {e}"))
-    })?;
+    let bytes = wtr
+        .into_inner()
+        .map_err(|e| pagebridge_core::error::PagebridgeError::Internal(format!("csv: {e}")))?;
     Ok(String::from_utf8_lossy(&bytes).into_owned())
 }

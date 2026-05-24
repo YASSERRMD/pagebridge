@@ -10,12 +10,7 @@
 //! [`SummaryWorkerConfig::max_concurrency`] in parallel, wait for the level
 //! to drain before climbing one level higher.
 
-use std::sync::Arc;
-
-use crate::adapter::StorageAdapter;
 use crate::id::{DocId, NodeId};
-use crate::llm::LlmProvider;
-use crate::prompts::PromptLibrary;
 use crate::record::{NodeLevel, NodeSummary};
 use crate::workspace::WorkspaceId;
 
@@ -78,22 +73,11 @@ impl SummaryWorkerConfig {
     }
 }
 
-/// Worker held by the ingest pipeline. Long-lived for the duration of one
-/// `ingest_document` invocation; consumed when the pipeline finishes.
-pub(crate) struct SummaryWorker {
-    #[allow(dead_code)]
-    pub(crate) adapter: Arc<dyn StorageAdapter>,
-    #[allow(dead_code)]
-    pub(crate) llm: Arc<dyn LlmProvider>,
-    #[allow(dead_code)]
-    pub(crate) prompts: Arc<PromptLibrary>,
-    #[allow(dead_code)]
-    pub(crate) rx: async_channel::Receiver<SummaryTask>,
-    #[allow(dead_code)]
-    pub(crate) semaphore: Arc<tokio::sync::Semaphore>,
-    #[allow(dead_code)]
-    pub(crate) config: SummaryWorkerConfig,
-}
+// SummaryWorker as a struct was an early sketch; the actual implementation
+// inlined its responsibilities into `summarize_document_parallel` in
+// `super::summarize_document_parallel` so the spawn-per-task closure can move
+// the per-task state without an intermediate handle. The public `SummaryTask`
+// and `SummaryWorkerConfig` types remain the user-facing surface.
 
 #[cfg(test)]
 mod tests {

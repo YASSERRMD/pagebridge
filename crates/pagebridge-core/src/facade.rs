@@ -4,7 +4,9 @@
     clippy::missing_errors_doc,
     clippy::too_many_lines,
     clippy::module_name_repetitions,
-    clippy::cast_possible_truncation
+    clippy::cast_possible_truncation,
+    clippy::missing_const_for_fn,
+    clippy::too_many_arguments
 )]
 
 use std::pin::Pin;
@@ -275,10 +277,7 @@ impl Pagebridge {
     /// of the [`ReingestPrediction`] variants so CLI and admin UIs can show
     /// "no work required" / "X leaves changed" / "full re-ingest" before the
     /// caller commits to the expensive call.
-    pub async fn would_reingest_change(
-        &self,
-        params: &IngestParams,
-    ) -> Result<ReingestPrediction> {
+    pub async fn would_reingest_change(&self, params: &IngestParams) -> Result<ReingestPrediction> {
         use crate::ingest::source_hash;
         let raw_hash = source_hash(&params.raw_text);
         let target_doc = params
@@ -486,7 +485,8 @@ impl Pagebridge {
         let outcome = match nav_result {
             Ok(o) => o,
             Err(e) => {
-                self.emit_ask_audit(question, started, &e, None, None, 0, 0).await;
+                self.emit_ask_audit(question, started, &e, None, None, 0, 0)
+                    .await;
                 return Err(e);
             }
         };
@@ -502,7 +502,8 @@ impl Pagebridge {
         let mut answer = match synth_result {
             Ok(a) => a,
             Err(e) => {
-                self.emit_ask_audit(question, started, &e, None, None, 0, 0).await;
+                self.emit_ask_audit(question, started, &e, None, None, 0, 0)
+                    .await;
                 return Err(e);
             }
         };
@@ -511,10 +512,7 @@ impl Pagebridge {
         let _ = Sha256::new(); // (linker hint when sha2 stays only used here)
         let latency_ms = u32::try_from(started.elapsed().as_millis()).unwrap_or(u32::MAX);
         let qhash = sha256_hex(question.as_bytes());
-        let used_node_ids: Vec<crate::id::NodeId> = answer
-            .trace
-            .selected_leaves
-            .clone();
+        let used_node_ids: Vec<crate::id::NodeId> = answer.trace.selected_leaves.clone();
         let used_hashes: Vec<String> = used_node_ids
             .iter()
             .map(|n| sha256_hex(n.as_str().as_bytes()))
@@ -683,7 +681,6 @@ fn parse_source_kind(s: &str) -> SourceKind {
 }
 
 impl Pagebridge {
-
     /// Scope this instance to a specific workspace. Returns a lightweight
     /// handle whose every operation is tagged with the workspace id. In
     /// v0.3.0 the tagging is metadata-only (filtering happens at the facade

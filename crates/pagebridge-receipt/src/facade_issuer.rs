@@ -106,6 +106,9 @@ mod tests {
             .unwrap();
         assert!(out.is_object());
         assert!(out["signature_hex"].as_str().is_some());
-        assert_eq!(out["key_id"], serde_json::Value::String(secret.key_id.clone()));
+        assert_eq!(
+            out["key_id"],
+            serde_json::Value::String(secret.key_id.clone())
+        );
     }
 }

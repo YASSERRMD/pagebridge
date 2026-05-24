@@ -23,11 +23,7 @@ pub struct FileSource<T> {
 }
 
 impl<T: Send + Sync + 'static> FileSource<T> {
-    pub fn new(
-        path: impl Into<PathBuf>,
-        poll: Duration,
-        parse: fn(&[u8]) -> Option<T>,
-    ) -> Self {
+    pub fn new(path: impl Into<PathBuf>, poll: Duration, parse: fn(&[u8]) -> Option<T>) -> Self {
         Self {
             path: path.into(),
             poll,

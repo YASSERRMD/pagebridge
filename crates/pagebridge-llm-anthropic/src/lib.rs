@@ -14,7 +14,8 @@
     clippy::option_if_let_else,
     clippy::single_match_else,
     clippy::or_fun_call,
-    clippy::match_same_arms
+    clippy::match_same_arms,
+    clippy::missing_const_for_fn
 )]
 
 use std::time::Duration;

@@ -42,11 +42,7 @@ impl ElasticSink {
     }
 
     #[must_use]
-    pub fn with_indexes(
-        mut self,
-        events: impl Into<String>,
-        batches: impl Into<String>,
-    ) -> Self {
+    pub fn with_indexes(mut self, events: impl Into<String>, batches: impl Into<String>) -> Self {
         self.index_events = events.into();
         self.index_batches = batches.into();
         self

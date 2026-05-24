@@ -9,7 +9,13 @@
 //! Native builds expose a tiny shim API so the integration test suite
 //! can exercise the boundary without a browser.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::redundant_closure_for_method_calls,
+    clippy::needless_pass_by_value
+)]
 
 use serde::{Deserialize, Serialize};
 

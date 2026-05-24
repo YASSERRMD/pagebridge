@@ -75,9 +75,7 @@ impl EvalSummary {
             };
         }
         let nf = n as f32;
-        let sum = |f: fn(&EvalResult) -> f32| {
-            results.iter().map(f).sum::<f32>() / nf
-        };
+        let sum = |f: fn(&EvalResult) -> f32| results.iter().map(f).sum::<f32>() / nf;
         let mut latencies: Vec<u64> = results.iter().map(|r| r.latency_ms).collect();
         latencies.sort_unstable();
         let pick = |q: f64| -> u64 {

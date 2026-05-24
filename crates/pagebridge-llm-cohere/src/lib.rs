@@ -4,15 +4,19 @@
 //! command-r-plus, and any future Command models. JSON-mode uses the
 //! `response_format = {"type": "json_object"}` option.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::cast_possible_truncation,
+    clippy::trivially_copy_pass_by_ref
+)]
 
 use async_trait::async_trait;
 use serde_json::json;
 
 use pagebridge_core::error::{PagebridgeError, Result};
-use pagebridge_core::llm::{
-    CompletionRequest, CompletionResponse, FinishReason, LlmProvider,
-};
+use pagebridge_core::llm::{CompletionRequest, CompletionResponse, FinishReason, LlmProvider};
 
 #[derive(Debug, Clone)]
 pub struct CohereProvider {
@@ -96,7 +100,8 @@ impl LlmProvider for CohereProvider {
         _schema: &serde_json::Value,
     ) -> Result<serde_json::Value> {
         if let Some(last) = req.messages.last_mut() {
-            last.content.push_str("\n\nReturn ONLY a single valid JSON object.");
+            last.content
+                .push_str("\n\nReturn ONLY a single valid JSON object.");
         }
         let resp = self.complete(req).await?;
         serde_json::from_str(resp.text.trim()).map_err(|e| PagebridgeError::Llm {

@@ -95,7 +95,8 @@ trait IngestParamsWorkspace {
 
 impl IngestParamsWorkspace for IngestParams {
     fn set_workspace_tag(&mut self, ws: &WorkspaceId) {
-        self.user_metadata.insert("workspace".into(), ws.to_string());
+        self.user_metadata
+            .insert("workspace".into(), ws.to_string());
         // The IngestParams carries metadata through `user_metadata`; the
         // workspace tag lives there. The downstream facade copies it into
         // `DocumentEntry::source_kind` as a "ws:<id>/<kind>" prefix in v0.4.

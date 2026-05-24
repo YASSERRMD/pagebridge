@@ -664,8 +664,7 @@ impl StorageAdapter for SqliteAdapter {
                 .await
                 .map_err(|e| err("batch get_summary_cache", e))?;
             for row in rows {
-                let hbytes: Vec<u8> =
-                    row.try_get("source_hash").map_err(|e| err("col hash", e))?;
+                let hbytes: Vec<u8> = row.try_get("source_hash").map_err(|e| err("col hash", e))?;
                 let mut harr = [0u8; 32];
                 if hbytes.len() == 32 {
                     harr.copy_from_slice(&hbytes);

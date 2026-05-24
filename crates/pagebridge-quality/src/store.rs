@@ -34,6 +34,11 @@ impl QualityStore for MemoryQualityStore {
         self.inner.lock().push(sample);
     }
     async fn since(&self, ts_ns: u128) -> Vec<ScoreSample> {
-        self.inner.lock().iter().filter(|s| s.ts_ns >= ts_ns).cloned().collect()
+        self.inner
+            .lock()
+            .iter()
+            .filter(|s| s.ts_ns >= ts_ns)
+            .cloned()
+            .collect()
     }
 }

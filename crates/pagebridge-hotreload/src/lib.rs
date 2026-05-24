@@ -5,7 +5,17 @@
 //! atomically. In-flight queries see the value that was current when
 //! they started.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::useless_vec,
+    clippy::needless_pass_by_value,
+    clippy::significant_drop_in_scrutinee,
+    clippy::significant_drop_tightening,
+    clippy::into_iter_on_ref,
+    clippy::iter_on_single_items
+)]
 
 use std::sync::Arc;
 
@@ -45,7 +55,8 @@ impl<T: Send + Sync + 'static> Hot<T> {
 
     /// Publish a new value. Atomic.
     pub fn swap(&self, next: T) -> Arc<T> {
-        self.version.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.version
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         self.inner.swap(Arc::new(next))
     }
 

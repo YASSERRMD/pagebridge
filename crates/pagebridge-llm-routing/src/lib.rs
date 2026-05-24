@@ -14,10 +14,24 @@
 //!   the per-request budget.
 //! - [`Strategy::RoundRobin`]: deterministic rotation across the chain.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::redundant_closure_for_method_calls,
+    clippy::redundant_closure,
+    clippy::needless_pass_by_value,
+    clippy::cast_precision_loss,
+    clippy::unnecessary_literal_bound,
+    clippy::significant_drop_tightening,
+    clippy::significant_drop_in_scrutinee,
+    clippy::cast_possible_truncation,
+    clippy::cast_lossless,
+    clippy::cast_sign_loss
+)]
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -138,31 +152,45 @@ fn no_providers_err() -> PagebridgeError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pagebridge_core::llm::{FinishReason, CompletionResponse, LlmConfig};
+    use pagebridge_core::llm::{CompletionResponse, FinishReason, LlmConfig};
     use std::sync::Mutex;
 
     struct AlwaysFail;
     #[async_trait]
     impl LlmProvider for AlwaysFail {
-        fn name(&self) -> &'static str { "fail" }
-        fn model(&self) -> &str { "x" }
+        fn name(&self) -> &'static str {
+            "fail"
+        }
+        fn model(&self) -> &str {
+            "x"
+        }
         async fn complete(&self, _: CompletionRequest) -> Result<CompletionResponse> {
-            Err(PagebridgeError::Llm { provider: "fail".into(), message: "down".into() })
+            Err(PagebridgeError::Llm {
+                provider: "fail".into(),
+                message: "down".into(),
+            })
         }
         async fn complete_json(
             &self,
             _: CompletionRequest,
             _: &serde_json::Value,
         ) -> Result<serde_json::Value> {
-            Err(PagebridgeError::Llm { provider: "fail".into(), message: "down".into() })
+            Err(PagebridgeError::Llm {
+                provider: "fail".into(),
+                message: "down".into(),
+            })
         }
     }
 
     struct AlwaysOk(Mutex<u32>);
     #[async_trait]
     impl LlmProvider for AlwaysOk {
-        fn name(&self) -> &'static str { "ok" }
-        fn model(&self) -> &str { "y" }
+        fn name(&self) -> &'static str {
+            "ok"
+        }
+        fn model(&self) -> &str {
+            "y"
+        }
         async fn complete(&self, _: CompletionRequest) -> Result<CompletionResponse> {
             *self.0.lock().unwrap() += 1;
             Ok(CompletionResponse {

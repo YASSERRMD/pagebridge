@@ -32,8 +32,7 @@ fn extract_node(row: &oracle::Row) -> Result<NodeRecord> {
     let is_leaf: i32 = row.get("is_leaf").map_err(|e| err("is_leaf", e))?;
     let created_at: i64 = row.get("created_at").map_err(|e| err("created_at", e))?;
     let updated_at: i64 = row.get("updated_at").map_err(|e| err("updated_at", e))?;
-    let source_hash_blob: Vec<u8> =
-        row.get("source_hash").map_err(|e| err("source_hash", e))?;
+    let source_hash_blob: Vec<u8> = row.get("source_hash").map_err(|e| err("source_hash", e))?;
 
     let mut hash = [0u8; 32];
     let len = source_hash_blob.len().min(32);
@@ -117,9 +116,23 @@ pub async fn upsert_node(pool: &OraclePool, node: &NodeRecord) -> Result<()> {
                 VALUES (:1, :2, :3, :4, :5, :6, :7, :8,
                         :9, :10, :11, :12, :13, :14, :15, :16, :17)";
         let params: [&dyn ToSql; 17] = [
-            &node_id, &doc_id, &parent_id, &title, &level, &routing_summary, &summary,
-            &child_ids_json, &span_start, &span_end, &page_start, &page_end, &keywords_json,
-            &is_leaf, &created_at, &updated_at, &hash,
+            &node_id,
+            &doc_id,
+            &parent_id,
+            &title,
+            &level,
+            &routing_summary,
+            &summary,
+            &child_ids_json,
+            &span_start,
+            &span_end,
+            &page_start,
+            &page_end,
+            &keywords_json,
+            &is_leaf,
+            &created_at,
+            &updated_at,
+            &hash,
         ];
         conn.execute(sql, &params).map_err(|e| err("upsert", e))?;
         conn.commit().map_err(|e| err("commit", e))?;
@@ -144,10 +157,7 @@ pub async fn get_node(pool: &OraclePool, id: &NodeId) -> Result<Option<NodeRecor
     .await
 }
 
-pub async fn children_summaries(
-    pool: &OraclePool,
-    parent: &NodeId,
-) -> Result<Vec<NodeSummary>> {
+pub async fn children_summaries(pool: &OraclePool, parent: &NodeId) -> Result<Vec<NodeSummary>> {
     let parent_str = parent.as_str().to_owned();
     pool.with_conn(move |conn| {
         let sql = "SELECT node_id, parent_id, title, node_level, routing_summary, is_leaf
@@ -188,7 +198,9 @@ pub async fn children_records(pool: &OraclePool, parent: &NodeId) -> Result<Vec<
         let sql = format!(
             "SELECT {NODE_COLS} FROM pagebridge_nodes WHERE parent_id = :1 ORDER BY node_id"
         );
-        let rows = conn.query(&sql, &[&parent_str]).map_err(|e| err("crec", e))?;
+        let rows = conn
+            .query(&sql, &[&parent_str])
+            .map_err(|e| err("crec", e))?;
         let mut out = Vec::new();
         for r in rows {
             let row = r.map_err(|e| err("crec row", e))?;
@@ -238,7 +250,8 @@ pub async fn delete_document(pool: &OraclePool, doc_id: &DocId) -> Result<()> {
 
 pub async fn list_documents(pool: &OraclePool) -> Result<Vec<DocumentEntry>> {
     pool.with_conn(|conn| {
-        let sql = "SELECT doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count
+        let sql =
+            "SELECT doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count
                    FROM pagebridge_docs ORDER BY doc_id";
         let rows = conn.query(sql, &[]).map_err(|e| err("list", e))?;
         let mut out = Vec::new();
@@ -287,7 +300,8 @@ pub async fn upsert_document(pool: &OraclePool, doc: &DocumentEntry) -> Result<(
                 (doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count)
                 VALUES (:1, :2, :3, :4, :5, :6, :7)";
         let params: [&dyn ToSql; 7] = [&d, &t, &k, &i, &r, &lc, &bc];
-        conn.execute(sql, &params).map_err(|e| err("upsert doc", e))?;
+        conn.execute(sql, &params)
+            .map_err(|e| err("upsert doc", e))?;
         conn.commit().map_err(|e| err("commit", e))?;
         Ok(())
     })
@@ -388,11 +402,7 @@ pub async fn put_raw(
     .await
 }
 
-pub async fn read_raw_span(
-    pool: &OraclePool,
-    doc_id: &DocId,
-    span: (u64, u64),
-) -> Result<Vec<u8>> {
+pub async fn read_raw_span(pool: &OraclePool, doc_id: &DocId, span: (u64, u64)) -> Result<Vec<u8>> {
     if span.0 > span.1 {
         return Err(PagebridgeError::InvalidArgument(format!(
             "span {span:?} start > end"
@@ -499,7 +509,9 @@ pub async fn stats(pool: &OraclePool) -> Result<AdapterStats> {
 }
 
 fn count_one(conn: &Connection, sql: &str) -> Result<i64> {
-    let n: i64 = conn.query_row_as::<i64>(sql, &[]).map_err(|e| err(sql, e))?;
+    let n: i64 = conn
+        .query_row_as::<i64>(sql, &[])
+        .map_err(|e| err(sql, e))?;
     Ok(n)
 }
 

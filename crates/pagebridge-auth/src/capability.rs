@@ -118,7 +118,12 @@ mod tests {
 
     #[test]
     fn admin_implies_everything() {
-        for cap in [Capability::Read, Capability::Ask, Capability::Ingest, Capability::Admin] {
+        for cap in [
+            Capability::Read,
+            Capability::Ask,
+            Capability::Ingest,
+            Capability::Admin,
+        ] {
             assert!(Capability::Admin.implies(cap));
         }
     }
@@ -140,7 +145,10 @@ mod tests {
     #[test]
     fn capability_parses_from_lower_and_mixed_case() {
         assert_eq!(Capability::from_str("ASK").unwrap(), Capability::Ask);
-        assert_eq!(Capability::from_str(" ingest ").unwrap(), Capability::Ingest);
+        assert_eq!(
+            Capability::from_str(" ingest ").unwrap(),
+            Capability::Ingest
+        );
         assert!(Capability::from_str("nuke").is_err());
     }
 }

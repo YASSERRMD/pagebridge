@@ -36,11 +36,8 @@ pub async fn serve_stdio(bridge: Pagebridge) -> std::io::Result<()> {
         let req: protocol::Request = match serde_json::from_str(trimmed) {
             Ok(r) => r,
             Err(e) => {
-                let resp = protocol::Response::err(
-                    Value::Null,
-                    -32700,
-                    format!("parse error: {e}"),
-                );
+                let resp =
+                    protocol::Response::err(Value::Null, -32700, format!("parse error: {e}"));
                 write_response(&mut stdout, &resp).await?;
                 continue;
             }
@@ -71,11 +68,7 @@ pub async fn handle_line(bridge: &Arc<Pagebridge>, line: &str) -> Option<String>
     let req: protocol::Request = match serde_json::from_str(line) {
         Ok(r) => r,
         Err(e) => {
-            let resp = protocol::Response::err(
-                Value::Null,
-                -32700,
-                format!("parse error: {e}"),
-            );
+            let resp = protocol::Response::err(Value::Null, -32700, format!("parse error: {e}"));
             return Some(serde_json::to_string(&resp).unwrap_or_default());
         }
     };

@@ -10,7 +10,13 @@
 //! Same question + same corpus snapshot + same `DeterministicMode` config
 //! = byte-identical answer, today or in three years.
 
-#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions,
+    clippy::missing_const_for_fn,
+    clippy::match_same_arms,
+    clippy::too_long_first_doc_paragraph
+)]
 
 pub mod adapter_canonical;
 pub mod config;

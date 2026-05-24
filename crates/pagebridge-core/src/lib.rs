@@ -16,8 +16,8 @@ pub mod llm;
 pub mod llm_policy;
 pub mod prompts;
 pub mod record;
-pub mod search;
 pub mod replication;
+pub mod search;
 pub mod trace;
 pub mod types;
 pub mod workspace;
@@ -44,18 +44,16 @@ pub use llm_policy::{
     parse_retry_after, CircuitBreaker, CircuitBreakerConfig, LlmCallPolicy, RetryClass,
 };
 pub use prompts::{PromptContext, PromptLibrary};
-pub use replication::{
-    InvalidationEvent, InvalidationKind, ReplicationConfig, ReplicationRole,
-};
-pub use workspace::WorkspaceId;
-pub use workspace_handle::WorkspaceHandle;
 pub use record::{NodeLevel, NodeRecord, NodeSummary};
+pub use replication::{InvalidationEvent, InvalidationKind, ReplicationConfig, ReplicationRole};
 pub use types::{
     AdapterStats, Answer, AnswerChunk, Citation, DiffMode, DocumentEntry, DocumentHandle,
     DocumentIngestHandle, IngestParams, Navigation, NavigationConfig, PagebridgeStats, QueryTrace,
     ReingestPrediction, SearchHit, SourceKind, SummaryCacheEntry, TraceStep, TraceStorageMode,
     UpdateParams, UpdateReport,
 };
+pub use workspace::WorkspaceId;
+pub use workspace_handle::WorkspaceHandle;
 
 /// Crate version string, used by the CLI and by trace metadata.
 #[must_use]

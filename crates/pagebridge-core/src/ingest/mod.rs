@@ -32,7 +32,9 @@
     clippy::doc_overindented_list_items,
     clippy::ignored_unit_patterns,
     clippy::too_long_first_doc_paragraph,
-    clippy::unused_self
+    clippy::unused_self,
+    clippy::cognitive_complexity,
+    clippy::missing_const_for_fn
 )]
 
 pub mod batch_writer;
@@ -108,7 +110,14 @@ pub async fn ingest(
     prompts: Arc<PromptLibrary>,
     params: IngestParams,
 ) -> Result<(DocumentHandle, JoinHandle<Result<()>>)> {
-    ingest_with_config(storage, llm, prompts, params, SummaryWorkerConfig::default()).await
+    ingest_with_config(
+        storage,
+        llm,
+        prompts,
+        params,
+        SummaryWorkerConfig::default(),
+    )
+    .await
 }
 
 /// Drive a full ingestion using the specified [`SummaryWorkerConfig`]. The
