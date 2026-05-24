@@ -13,6 +13,7 @@ pub mod facade;
 pub mod id;
 pub mod ingest;
 pub mod llm;
+pub mod llm_policy;
 pub mod prompts;
 pub mod record;
 pub mod search;
@@ -35,6 +36,9 @@ pub use id::{DocId, NodeId};
 pub use llm::{
     ChatMessage, ChatRole, CompletionRequest, CompletionResponse, CompletionStream, FinishReason,
     LlmConfig, LlmProvider, RateLimits, StreamChunk, VisionImage,
+};
+pub use llm_policy::{
+    CircuitBreaker, CircuitBreakerConfig, LlmCallPolicy, RetryClass,
 };
 pub use prompts::{PromptContext, PromptLibrary};
 pub use replication::{
