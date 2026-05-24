@@ -22,6 +22,16 @@ pub struct WriterStats {
     pub failures: u64,
 }
 
+impl WriterStats {
+    /// True when at least one record failed even after the retry budget was
+    /// spent. Callers should treat the document as `partial_ingest` and
+    /// surface that to operators.
+    #[must_use]
+    pub const fn is_partial(&self) -> bool {
+        self.failures > 0
+    }
+}
+
 /// Tunable knobs for the batch writer.
 #[derive(Debug, Clone, Copy)]
 pub struct BatchWriterConfig {
