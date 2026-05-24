@@ -139,7 +139,38 @@ pub async fn ingest_with_progress(
     if let Some(p) = &progress {
         p.set_stage(IngestStage::Parsing);
     }
+    let _ = (&llm, &prompts, &worker_config); // touched again below
     let built = build_structural(&params)?;
+
+    // Fast path: if a document with this doc_id already exists and the new
+    // raw text hashes to the same value, skip parsing+structural+summary
+    // entirely. Returns a no-op handle and a JoinHandle that resolves
+    // immediately to Ok.
+    let raw_hash = source_hash(&params.raw_text);
+    if let Ok(existing) = storage.list_documents().await {
+        if let Some(prev) = existing.into_iter().find(|d| d.doc_id == built.doc_id) {
+            if prev.raw_text_hash == Some(raw_hash) {
+                if let Some(p) = &progress {
+                    p.note_total_nodes(built.leaf_count);
+                    p.note_structural_done();
+                    p.set_stage(IngestStage::Done);
+                }
+                let handle = DocumentHandle {
+                    doc_id: built.doc_id.clone(),
+                    root_node_id: NodeId::root(&built.doc_id),
+                    leaf_count: built.leaf_count,
+                    byte_count: built.byte_count,
+                    structural_ingest_ms: 0,
+                };
+                let join = tokio::spawn(async move { Ok(()) });
+                tracing::debug!(
+                    doc_id = %built.doc_id,
+                    "skip_on_equivalent fast path hit (raw_text_hash match)"
+                );
+                return Ok((handle, join));
+            }
+        }
+    }
     let root_node_id = NodeId::root(&built.doc_id);
     let doc_id = built.doc_id.clone();
     if let Some(p) = &progress {
