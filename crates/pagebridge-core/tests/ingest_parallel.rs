@@ -6,6 +6,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
+use parking_lot::Mutex;
+
 use async_trait::async_trait;
 use pagebridge_core::adapter::MemoryAdapter;
 use pagebridge_core::error::Result;
@@ -132,6 +134,119 @@ async fn concurrency_bound_is_respected() {
     );
     // We should have made at least one call.
     assert!(llm.total() >= 1);
+}
+
+/// Tracks the depth of every summarized parent in observation order so the
+/// test can assert that deeper levels finish before shallower ones start.
+struct OrderingLlm {
+    observed: Mutex<Vec<usize>>,
+}
+
+impl OrderingLlm {
+    fn new() -> Self {
+        Self {
+            observed: Mutex::new(Vec::new()),
+        }
+    }
+}
+
+#[async_trait]
+impl LlmProvider for OrderingLlm {
+    fn name(&self) -> &'static str {
+        "ordering"
+    }
+    fn model(&self) -> &str {
+        "ordering-1"
+    }
+    async fn complete(&self, _req: CompletionRequest) -> Result<CompletionResponse> {
+        Ok(CompletionResponse {
+            text: String::new(),
+            input_tokens: 0,
+            output_tokens: 0,
+            finish_reason: FinishReason::Stop,
+        })
+    }
+    async fn complete_json(
+        &self,
+        req: CompletionRequest,
+        _schema: &serde_json::Value,
+    ) -> Result<serde_json::Value> {
+        // The summarize prompt embeds the node id of each child via
+        // `## title (node_id)`. The deepest node id segment count is a
+        // proxy for the depth of the node being summarized + 1. We pull
+        // the first such id out and record its segment count.
+        let prompt = req
+            .messages
+            .last()
+            .map(|m| m.content.clone())
+            .unwrap_or_default();
+        let depth = prompt
+            .lines()
+            .find_map(|l| {
+                let start = l.rfind('(')?;
+                let end = l.rfind(')')?;
+                if end <= start {
+                    return None;
+                }
+                let id = &l[start + 1..end];
+                Some(id.matches(':').count())
+            })
+            .unwrap_or(0);
+        self.observed.lock().push(depth);
+        tokio::time::sleep(Duration::from_millis(5)).await;
+        Ok(serde_json::json!({
+            "routing_summary": "rs",
+            "summary": "s",
+            "keywords": []
+        }))
+    }
+}
+
+#[tokio::test]
+async fn level_ordering_is_preserved() {
+    let storage = Arc::new(MemoryAdapter::new());
+    let llm = Arc::new(OrderingLlm::new());
+    let prompts = Arc::new(PromptLibrary::v1());
+
+    // A deeper tree: 4 sections, 3 paragraphs each. The markdown parser
+    // creates document -> section -> leaf, so non-leaf depths are 1 (sections)
+    // and 0 (root).
+    let params = IngestParams {
+        title: "Order Test".into(),
+        source_kind: SourceKind::Markdown,
+        raw_text: synthetic_markdown(4, 3).into_bytes(),
+        doc_id: None,
+        user_metadata: std::collections::BTreeMap::default(),
+    };
+    let (_h, j) = ingest_with_config(
+        storage,
+        llm.clone(),
+        prompts,
+        params,
+        SummaryWorkerConfig {
+            max_concurrency: 4,
+            ..SummaryWorkerConfig::default()
+        },
+    )
+    .await
+    .unwrap();
+    j.await.unwrap().unwrap();
+
+    let order = llm.observed.lock().clone();
+    // Every deeper-depth call must come before any shallower-depth call.
+    // i.e. observation order, when scanned, never sees a smaller value
+    // before a larger one that comes later.
+    let mut min_seen = usize::MAX;
+    for d in order.iter().copied().rev() {
+        assert!(
+            d >= min_seen || min_seen == usize::MAX,
+            "saw deeper depth {d} after shallower {min_seen} (order = {:?})",
+            order
+        );
+        if d < min_seen {
+            min_seen = d;
+        }
+    }
 }
 
 #[tokio::test]
