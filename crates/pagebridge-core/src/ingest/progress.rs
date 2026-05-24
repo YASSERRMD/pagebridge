@@ -203,7 +203,7 @@ impl ProgressTracker {
         let new_done = done.saturating_sub(last_done) as f64;
         let instant_rate = new_done / (dt_ms as f64 / 1_000.0);
         let prev_rate = self.ema_rate_micro.load(Ordering::SeqCst) as f64 / 1_000_000.0;
-        let alpha = if prev_rate == 0.0 { 1.0 } else { 0.3 };
+        let alpha: f64 = if prev_rate == 0.0 { 1.0 } else { 0.3 };
         let new_rate = alpha.mul_add(instant_rate, (1.0 - alpha) * prev_rate);
         self.ema_rate_micro
             .store((new_rate * 1_000_000.0) as u64, Ordering::SeqCst);
