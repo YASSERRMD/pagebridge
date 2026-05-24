@@ -272,6 +272,12 @@ async fn summarize_document_parallel(
         Ok(Err(e)) => tracing::warn!(error = %e, "BatchWriter exited with error"),
         Err(e) => tracing::warn!(error = %e, "BatchWriter join failed"),
     }
+    // Force a write-side flush so search sees every summary immediately. On
+    // SQL adapters this is a no-op; on the embedded adapter it commits the
+    // tantivy writer past any deferred segment writes.
+    if let Err(e) = storage.flush().await {
+        tracing::warn!(error = %e, "post-summary flush failed");
+    }
     Ok(())
 }
 

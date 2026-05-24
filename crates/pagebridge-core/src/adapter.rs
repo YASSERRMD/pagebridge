@@ -126,6 +126,14 @@ pub trait StorageAdapter: Send + Sync + 'static {
 
     /// Cheap connectivity check.
     async fn ping(&self) -> Result<()>;
+
+    /// Flush any deferred write-side buffers so that subsequent queries see
+    /// every previously upserted node. The embedded adapter uses this to
+    /// force a tantivy commit; SQL adapters return immediately since they
+    /// commit synchronously per call. Idempotent.
+    async fn flush(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// In-memory adapter for unit-testing higher-level logic.
