@@ -131,6 +131,89 @@ pub struct LlmConfig {
     pub default_temperature: f32,
 }
 
+/// Declared rate limits for an LLM provider.
+///
+/// The ingest scheduler reads these via [`LlmProvider::rate_limits`] and
+/// constructs a governor-backed token bucket plus a concurrency semaphore
+/// sized to never exceed the declared caps. Setting any field to `None`
+/// means "no provider-side limit on this dimension".
+#[derive(Debug, Clone, Copy)]
+pub struct RateLimits {
+    pub requests_per_minute: Option<u32>,
+    pub tokens_per_minute: Option<u32>,
+    pub max_concurrent_requests: Option<u32>,
+}
+
+impl RateLimits {
+    /// No declared limits. Use for local providers (Ollama, llama.cpp) or
+    /// when the caller wants to manage rate-limiting themselves.
+    #[must_use]
+    pub const fn unlimited() -> Self {
+        Self {
+            requests_per_minute: None,
+            tokens_per_minute: None,
+            max_concurrent_requests: None,
+        }
+    }
+
+    /// Groq free tier circa 2026: 30 RPM, conservative concurrency cap.
+    #[must_use]
+    pub const fn groq_free() -> Self {
+        Self {
+            requests_per_minute: Some(30),
+            tokens_per_minute: Some(15_000),
+            max_concurrent_requests: Some(4),
+        }
+    }
+
+    /// Groq paid tier: ~300 RPM with much higher concurrency headroom.
+    #[must_use]
+    pub const fn groq_paid() -> Self {
+        Self {
+            requests_per_minute: Some(300),
+            tokens_per_minute: Some(180_000),
+            max_concurrent_requests: Some(32),
+        }
+    }
+
+    /// Anthropic tier 1: 50 RPM, 40k input TPM.
+    #[must_use]
+    pub const fn anthropic_tier_1() -> Self {
+        Self {
+            requests_per_minute: Some(50),
+            tokens_per_minute: Some(40_000),
+            max_concurrent_requests: Some(8),
+        }
+    }
+
+    /// OpenAI tier 1: 500 RPM, generous concurrency.
+    #[must_use]
+    pub const fn openai_tier_1() -> Self {
+        Self {
+            requests_per_minute: Some(500),
+            tokens_per_minute: Some(60_000),
+            max_concurrent_requests: Some(16),
+        }
+    }
+
+    /// Local provider (llamacpp, ollama, mlx): no network throttle, but
+    /// cap concurrency to keep the CPU/GPU from thrashing.
+    #[must_use]
+    pub const fn local() -> Self {
+        Self {
+            requests_per_minute: None,
+            tokens_per_minute: None,
+            max_concurrent_requests: Some(2),
+        }
+    }
+}
+
+impl Default for RateLimits {
+    fn default() -> Self {
+        Self::unlimited()
+    }
+}
+
 impl Default for LlmConfig {
     fn default() -> Self {
         Self {
