@@ -39,11 +39,16 @@ pub mod markdown;
 pub mod pdf;
 pub mod plain;
 pub mod tree;
+pub mod worker;
 
+pub use worker::{SummaryTask, SummaryWorkerConfig};
+
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use sha2::{Digest, Sha256};
+use tokio::sync::Semaphore;
 use tokio::task::JoinHandle;
 
 use crate::adapter::StorageAdapter;
@@ -97,6 +102,19 @@ pub async fn ingest(
     prompts: Arc<PromptLibrary>,
     params: IngestParams,
 ) -> Result<(DocumentHandle, JoinHandle<Result<()>>)> {
+    ingest_with_config(storage, llm, prompts, params, SummaryWorkerConfig::default()).await
+}
+
+/// Drive a full ingestion using the specified [`SummaryWorkerConfig`]. The
+/// `SummaryWorkerConfig::default()` variant matches the historical sequential
+/// behavior when `max_concurrency = 1`.
+pub async fn ingest_with_config(
+    storage: Arc<dyn StorageAdapter>,
+    llm: Arc<dyn LlmProvider>,
+    prompts: Arc<PromptLibrary>,
+    params: IngestParams,
+    worker_config: SummaryWorkerConfig,
+) -> Result<(DocumentHandle, JoinHandle<Result<()>>)> {
     let start = now_ms();
     let built = build_structural(&params)?;
     let root_node_id = NodeId::root(&built.doc_id);
@@ -124,127 +142,193 @@ pub async fn ingest(
         structural_ingest_ms: now_ms().saturating_sub(start) as u64,
     };
 
-    // Background summary task.
     let storage2 = Arc::clone(&storage);
     let llm2 = Arc::clone(&llm);
     let prompts2 = Arc::clone(&prompts);
     let nodes = built.nodes;
-    let join = tokio::spawn(async move { run_summaries(storage2, llm2, prompts2, nodes).await });
+    let join = tokio::spawn(async move {
+        summarize_document_parallel(storage2, llm2, prompts2, nodes, worker_config).await
+    });
 
     Ok((handle, join))
 }
 
-async fn run_summaries(
+/// Drive summary work for every node in `nodes`, level-by-level, with up to
+/// [`SummaryWorkerConfig::max_concurrency`] tasks in flight per level.
+///
+/// Bottom-up ordering is preserved: leaves first (no LLM), then sections,
+/// then chapters, then root. Within a level, every task runs in parallel,
+/// bounded by a semaphore. The next level does not start until the current
+/// level fully drains, which guarantees that when a parent is summarized
+/// every child already has its summary persisted.
+async fn summarize_document_parallel(
     storage: Arc<dyn StorageAdapter>,
     llm: Arc<dyn LlmProvider>,
     prompts: Arc<PromptLibrary>,
     nodes: Vec<NodeRecord>,
+    config: SummaryWorkerConfig,
 ) -> Result<()> {
-    let mut ordered = nodes;
-    // Deepest first so when we summarize a parent its children already have
-    // routing summaries we can include.
-    ordered.sort_by(|a, b| b.node_id.depth().cmp(&a.node_id.depth()));
     let fingerprint = format!("{}:{}", llm.name(), llm.model());
 
-    for n in &ordered {
-        if n.is_leaf {
-            // Leaf summaries are the body text trimmed to a useful preview; no LLM needed.
-            let mut updated = n.clone();
-            if updated.summary.is_empty() {
-                updated.summary = updated.routing_summary.clone();
+    let by_depth = group_nodes_by_depth(nodes);
+
+    let effective_concurrency = config.effective_concurrency(None).max(1) as usize;
+    let semaphore = Arc::new(Semaphore::new(effective_concurrency));
+    tracing::debug!(
+        max_concurrency = effective_concurrency,
+        levels = by_depth.len(),
+        "starting parallel summary fan-out"
+    );
+
+    // Process from deepest depth (highest key) down to root (depth 0). The
+    // outer `for` loop is the level barrier: every task at depth N+1 finishes
+    // before any task at depth N starts. This invariant is what guarantees
+    // a parent sees fully persisted child summaries.
+    for (depth, level_nodes) in by_depth.into_iter().rev() {
+        let level_size = level_nodes.len();
+        tracing::trace!(depth, level_size, "summarizing level");
+        let mut handles = Vec::with_capacity(level_size);
+        for node in level_nodes {
+            let Ok(permit) = semaphore.clone().acquire_owned().await else {
+                break;
+            };
+            let storage = Arc::clone(&storage);
+            let llm = Arc::clone(&llm);
+            let prompts = Arc::clone(&prompts);
+            let fingerprint = fingerprint.clone();
+            let handle = tokio::spawn(async move {
+                let _permit = permit;
+                summarize_one_node(&storage, &llm, &prompts, &node, &fingerprint).await
+            });
+            handles.push(handle);
+        }
+        // Drain the whole level. Per-task errors are logged but do not abort
+        // the document: missing one summary is recoverable, aborting is not.
+        for h in handles {
+            match h.await {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => tracing::warn!(error = %e, "summary task failed"),
+                Err(join_err) => tracing::warn!(error = %join_err, "summary task panicked"),
             }
-            storage.upsert_node(&updated).await?;
-            continue;
         }
-
-        let children = storage.children_records(&n.node_id).await?;
-        if children.is_empty() {
-            continue;
-        }
-        let mut child_payload = String::new();
-        for c in &children {
-            child_payload.push_str(&format!(
-                "## {} ({})\n{}\n\n",
-                c.title,
-                c.node_id.as_str(),
-                if c.routing_summary.is_empty() {
-                    &c.summary
-                } else {
-                    &c.routing_summary
-                }
-            ));
-        }
-        let payload_hash = source_hash(child_payload.as_bytes());
-
-        // Cache lookup keyed by the payload hash + model fingerprint.
-        let mut cached: Option<SummaryCacheEntry> = storage
-            .get_summary_cache(&payload_hash)
-            .await?
-            .filter(|e| e.model_fingerprint == fingerprint);
-
-        if cached.is_none() {
-            let ctx = PromptContext {
-                document_title: Some(n.title.clone()),
-                raw_text: Some(child_payload.clone()),
-                ..PromptContext::default()
-            };
-            let prompt = prompts.render("summarize", &ctx)?;
-            let resp = llm
-                .complete_json(
-                    CompletionRequest {
-                        system: Some("You are a precise summarizer.".into()),
-                        messages: vec![ChatMessage::user(prompt)],
-                        ..CompletionRequest::default()
-                    },
-                    &PromptLibrary::summarize_schema(),
-                )
-                .await?;
-            let routing_summary = resp
-                .get("routing_summary")
-                .and_then(|v| v.as_str())
-                .unwrap_or_default()
-                .to_owned();
-            let summary = resp
-                .get("summary")
-                .and_then(|v| v.as_str())
-                .unwrap_or_default()
-                .to_owned();
-            let keywords: Vec<String> = resp
-                .get("keywords")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(str::to_owned))
-                        .collect()
-                })
-                .unwrap_or_default();
-            let entry = SummaryCacheEntry {
-                routing_summary,
-                summary,
-                keywords,
-                model_fingerprint: fingerprint.clone(),
-                created_at: now_ms(),
-            };
-            storage.upsert_summary_cache(&payload_hash, &entry).await?;
-            cached = Some(entry);
-        }
-
-        let entry = cached.expect("cache populated above");
-        let mut updated = n.clone();
-        updated.routing_summary = if entry.routing_summary.is_empty() {
-            updated.routing_summary
-        } else {
-            entry.routing_summary
-        };
-        if updated.summary.is_empty() || updated.summary == updated.routing_summary {
-            updated.summary = entry.summary;
-        }
-        if updated.keywords.is_empty() {
-            updated.keywords = entry.keywords;
-        }
-        updated.updated_at = now_ms();
-        storage.upsert_node(&updated).await?;
     }
+    Ok(())
+}
+
+/// Group nodes by tree depth. Returned map is keyed by `node_id.depth()`,
+/// with deeper levels at higher keys. Useful for callers that want to drive
+/// their own per-level pipeline.
+#[must_use]
+pub fn group_nodes_by_depth(nodes: Vec<NodeRecord>) -> BTreeMap<usize, Vec<NodeRecord>> {
+    let mut by_depth: BTreeMap<usize, Vec<NodeRecord>> = BTreeMap::new();
+    for n in nodes {
+        by_depth.entry(n.node_id.depth()).or_default().push(n);
+    }
+    by_depth
+}
+
+async fn summarize_one_node(
+    storage: &Arc<dyn StorageAdapter>,
+    llm: &Arc<dyn LlmProvider>,
+    prompts: &Arc<PromptLibrary>,
+    node: &NodeRecord,
+    fingerprint: &str,
+) -> Result<()> {
+    if node.is_leaf {
+        let mut updated = node.clone();
+        if updated.summary.is_empty() {
+            updated.summary = updated.routing_summary.clone();
+        }
+        storage.upsert_node(&updated).await?;
+        return Ok(());
+    }
+
+    let children = storage.children_records(&node.node_id).await?;
+    if children.is_empty() {
+        return Ok(());
+    }
+    let mut child_payload = String::new();
+    for c in &children {
+        child_payload.push_str(&format!(
+            "## {} ({})\n{}\n\n",
+            c.title,
+            c.node_id.as_str(),
+            if c.routing_summary.is_empty() {
+                &c.summary
+            } else {
+                &c.routing_summary
+            }
+        ));
+    }
+    let payload_hash = source_hash(child_payload.as_bytes());
+
+    let mut cached: Option<SummaryCacheEntry> = storage
+        .get_summary_cache(&payload_hash)
+        .await?
+        .filter(|e| e.model_fingerprint == fingerprint);
+
+    if cached.is_none() {
+        let ctx = PromptContext {
+            document_title: Some(node.title.clone()),
+            raw_text: Some(child_payload.clone()),
+            ..PromptContext::default()
+        };
+        let prompt = prompts.render("summarize", &ctx)?;
+        let resp = llm
+            .complete_json(
+                CompletionRequest {
+                    system: Some("You are a precise summarizer.".into()),
+                    messages: vec![ChatMessage::user(prompt)],
+                    ..CompletionRequest::default()
+                },
+                &PromptLibrary::summarize_schema(),
+            )
+            .await?;
+        let routing_summary = resp
+            .get("routing_summary")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_owned();
+        let summary = resp
+            .get("summary")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_owned();
+        let keywords: Vec<String> = resp
+            .get("keywords")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(str::to_owned))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let entry = SummaryCacheEntry {
+            routing_summary,
+            summary,
+            keywords,
+            model_fingerprint: fingerprint.to_owned(),
+            created_at: now_ms(),
+        };
+        storage.upsert_summary_cache(&payload_hash, &entry).await?;
+        cached = Some(entry);
+    }
+
+    let entry = cached.expect("cache populated above");
+    let mut updated = node.clone();
+    updated.routing_summary = if entry.routing_summary.is_empty() {
+        updated.routing_summary
+    } else {
+        entry.routing_summary
+    };
+    if updated.summary.is_empty() || updated.summary == updated.routing_summary {
+        updated.summary = entry.summary;
+    }
+    if updated.keywords.is_empty() {
+        updated.keywords = entry.keywords;
+    }
+    updated.updated_at = now_ms();
+    storage.upsert_node(&updated).await?;
     Ok(())
 }
 

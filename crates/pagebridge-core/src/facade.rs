@@ -21,7 +21,7 @@ use crate::audit_hook::{
 };
 use crate::error::{PagebridgeError, Result};
 use crate::id::DocId;
-use crate::ingest::ingest as do_ingest;
+use crate::ingest::{ingest_with_config as do_ingest, SummaryWorkerConfig};
 use crate::llm::LlmProvider;
 use crate::prompts::PromptLibrary;
 use crate::search::{navigate, synthesize_answer, NavigationOutcome};
@@ -46,6 +46,9 @@ pub struct PagebridgeOptions {
     pub adapter_name: Option<String>,
     pub deterministic: Option<serde_json::Value>,
     pub snapshot_id: Option<String>,
+    /// Concurrency knobs for the ingest summary fan-out. Defaults to
+    /// `max_concurrency = 8`. Override with [`PagebridgeOptions::with_summary_worker_config`].
+    pub summary_worker: SummaryWorkerConfig,
 }
 
 impl PagebridgeOptions {
@@ -64,7 +67,18 @@ impl PagebridgeOptions {
             adapter_name: None,
             deterministic: None,
             snapshot_id: None,
+            summary_worker: SummaryWorkerConfig::default(),
         }
+    }
+
+    /// Override the summary fan-out concurrency knobs. The default is
+    /// `max_concurrency = 8`. Raise for paid-tier providers, lower for
+    /// free-tier rate-limited ones (or rely on
+    /// [`crate::llm::LlmProvider::rate_limits`] to do it automatically).
+    #[must_use]
+    pub fn with_summary_worker_config(mut self, cfg: SummaryWorkerConfig) -> Self {
+        self.summary_worker = cfg;
+        self
     }
 
     /// Switch the facade to deterministic mode. Accepts an opaque
@@ -126,6 +140,7 @@ pub(crate) struct PagebridgeInner {
     pub adapter_name: String,
     pub deterministic: Option<serde_json::Value>,
     pub snapshot_id: Option<String>,
+    pub summary_worker: SummaryWorkerConfig,
 }
 
 /// The cognitive retrieval appliance. Cheap to clone via `Arc`.
@@ -155,6 +170,7 @@ impl Pagebridge {
             adapter_name: opts.adapter_name.unwrap_or_else(|| "unknown".to_string()),
             deterministic: opts.deterministic,
             snapshot_id: opts.snapshot_id,
+            summary_worker: opts.summary_worker,
         };
         Ok(Self {
             inner: Arc::new(inner),
@@ -170,6 +186,7 @@ impl Pagebridge {
             Arc::clone(&self.inner.llm),
             Arc::clone(&self.inner.prompts),
             params,
+            self.inner.summary_worker,
         )
         .await;
         let latency_ms = u32::try_from(started.elapsed().as_millis()).unwrap_or(u32::MAX);
