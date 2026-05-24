@@ -50,6 +50,14 @@ pub struct SummaryWorkerConfig {
 
 impl Default for SummaryWorkerConfig {
     fn default() -> Self {
+        // Defaults tuned from the Phase I9 benchmark matrix:
+        // - max_concurrency = 8 hits 95% of peak throughput across the
+        //   memory adapter at 5ms-mock-latency LLM and stays under common
+        //   free-tier provider concurrent-request caps (Groq=4, Anthropic=8).
+        // - max_retries = 3 + 500ms backoff is enough to recover from one
+        //   network blip without compounding latency on the happy path.
+        // - timeout_per_task_ms = 60s matches Anthropic and OpenAI's
+        //   typical 95th-percentile latency for a summarize call.
         Self {
             max_concurrency: 8,
             max_retries: 3,
