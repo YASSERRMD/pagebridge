@@ -73,7 +73,7 @@ fn make_leaf(doc: &DocId, root: &NodeId, seq: u32) -> NodeRecord {
 }
 
 #[tokio::test]
-async fn search_invisible_until_flush_with_high_thresholds() {
+async fn batch_writes_invisible_until_threshold_or_flush() {
     let dir = tempdir().unwrap();
     let cfg = CommitSchedulerConfig {
         max_dirty_docs: 10_000,
@@ -84,9 +84,8 @@ async fn search_invisible_until_flush_with_high_thresholds() {
     let doc = DocId::new("doc-flush").unwrap();
     let root = NodeId::root(&doc);
     store.upsert_node(&make_root(&doc)).await.unwrap();
-    for i in 0..50 {
-        store.upsert_node(&make_leaf(&doc, &root, i)).await.unwrap();
-    }
+    let leaves: Vec<_> = (0..50).map(|i| make_leaf(&doc, &root, i)).collect();
+    store.upsert_nodes_batch(&leaves).await.unwrap();
     // No commit yet (threshold = 10k docs, age = 1h) so BM25 sees nothing.
     let hits = store
         .bm25_search("pagebridgesearchneedle", 10)
@@ -111,7 +110,7 @@ async fn search_invisible_until_flush_with_high_thresholds() {
 }
 
 #[tokio::test]
-async fn dirty_count_threshold_triggers_commit() {
+async fn batch_dirty_count_threshold_triggers_commit() {
     let dir = tempdir().unwrap();
     let cfg = CommitSchedulerConfig {
         max_dirty_docs: 5,
@@ -122,13 +121,37 @@ async fn dirty_count_threshold_triggers_commit() {
     let doc = DocId::new("doc-thresh").unwrap();
     let root = NodeId::root(&doc);
     store.upsert_node(&make_root(&doc)).await.unwrap();
-    for i in 0..6 {
-        store.upsert_node(&make_leaf(&doc, &root, i)).await.unwrap();
-    }
-    // After the 5th leaf the scheduler commits automatically.
+    let leaves: Vec<_> = (0..6).map(|i| make_leaf(&doc, &root, i)).collect();
+    store.upsert_nodes_batch(&leaves).await.unwrap();
     let hits = store
         .bm25_search("pagebridgesearchneedle", 10)
         .await
         .unwrap();
     assert!(!hits.is_empty(), "expected auto-commit at threshold");
+}
+
+#[tokio::test]
+async fn single_upsert_is_immediately_searchable() {
+    // The v1 contract: a single-node upsert_node is immediately searchable
+    // without an explicit flush. Phase I4's lazy commit only applies to the
+    // explicit batch path.
+    let dir = tempdir().unwrap();
+    let cfg = CommitSchedulerConfig {
+        max_dirty_docs: 10_000,
+        max_dirty_age: Duration::from_secs(3600),
+    };
+    let store = Arc::new(EmbeddedAdapter::open_with_commit_config(dir.path(), cfg).unwrap());
+    store.migrate().await.unwrap();
+    let doc = DocId::new("doc-single").unwrap();
+    let root = NodeId::root(&doc);
+    store.upsert_node(&make_root(&doc)).await.unwrap();
+    store.upsert_node(&make_leaf(&doc, &root, 0)).await.unwrap();
+    let hits = store
+        .bm25_search("pagebridgesearchneedle", 10)
+        .await
+        .unwrap();
+    assert!(
+        !hits.is_empty(),
+        "single upsert must be immediately searchable"
+    );
 }
