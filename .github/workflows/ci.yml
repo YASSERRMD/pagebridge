@@ -38,10 +38,15 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Build workspace
-        run: cargo build --workspace --all-targets
+        # Exclude pagebridge-py from the matrix build. Its cdylib target
+        # requires a configured Python/libpython that the runner may not
+        # have (macos-latest can't link the symbols without
+        # PYO3_PYTHON pointing at a matching interpreter). Python bindings
+        # are built in a dedicated job via maturin.
+        run: cargo build --workspace --all-targets --exclude pagebridge-py
 
       - name: Test workspace
-        run: cargo test --workspace
+        run: cargo test --workspace --exclude pagebridge-py
 
   lint:
     name: fmt + clippy
@@ -54,4 +59,4 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --exclude pagebridge-py -- -D warnings
