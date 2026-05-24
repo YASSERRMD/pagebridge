@@ -222,7 +222,9 @@ impl EmbeddedAdapter {
         }
         tx.commit().map_err(|e| adapter_err("commit", e))?;
 
-        // Update the FTS index.
+        // Append to the tantivy writer without forcing a commit. The lazy
+        // CommitScheduler decides when to flush based on dirty count and age,
+        // collapsing N segment-flushes into one.
         let mut writer = self.writer.lock();
         writer.delete_term(Term::from_field_text(
             self.fields.node_id,
@@ -231,13 +233,17 @@ impl EmbeddedAdapter {
         writer
             .add_document(self.build_doc(node))
             .map_err(|e| adapter_err("tantivy add", e))?;
-        writer
-            .commit()
-            .map_err(|e| adapter_err("tantivy commit", e))?;
-        drop(writer);
-        self.reader
-            .reload()
-            .map_err(|e| adapter_err("reader reload", e))?;
+        self.commit_scheduler.mark_dirty(1);
+        if self.commit_scheduler.should_commit() {
+            writer
+                .commit()
+                .map_err(|e| adapter_err("tantivy commit", e))?;
+            drop(writer);
+            self.reader
+                .reload()
+                .map_err(|e| adapter_err("reader reload", e))?;
+            self.commit_scheduler.note_committed();
+        }
         Ok(())
     }
 
@@ -266,9 +272,8 @@ impl EmbeddedAdapter {
         }
         tx.commit().map_err(|e| adapter_err("batch commit", e))?;
 
-        // One tantivy commit at the end so per-node segment flushes don't
-        // dominate the wall time. Lazy commit cadence is owned by Phase I4;
-        // here we just collapse N commits into one.
+        // Append the whole batch without forcing a commit, then let the lazy
+        // CommitScheduler decide whether the thresholds were crossed.
         let mut writer = self.writer.lock();
         for node in nodes {
             writer.delete_term(Term::from_field_text(
@@ -279,13 +284,17 @@ impl EmbeddedAdapter {
                 .add_document(self.build_doc(node))
                 .map_err(|e| adapter_err("batch tantivy add", e))?;
         }
-        writer
-            .commit()
-            .map_err(|e| adapter_err("batch tantivy commit", e))?;
-        drop(writer);
-        self.reader
-            .reload()
-            .map_err(|e| adapter_err("reader reload", e))?;
+        self.commit_scheduler.mark_dirty(nodes.len() as u64);
+        if self.commit_scheduler.should_commit() {
+            writer
+                .commit()
+                .map_err(|e| adapter_err("batch tantivy commit", e))?;
+            drop(writer);
+            self.reader
+                .reload()
+                .map_err(|e| adapter_err("reader reload", e))?;
+            self.commit_scheduler.note_committed();
+        }
         Ok(())
     }
 
