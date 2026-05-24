@@ -302,6 +302,8 @@ pub async fn list_documents(pool: &MsPool) -> Result<Vec<DocumentEntry>> {
             root_node_id: NodeId::new(req_str(row, 4, "root_node_id")?)?,
             leaf_count: req_i32(row, 5, "leaf_count")? as u32,
             byte_count: req_i64(row, 6, "byte_count")? as u64,
+            raw_text_hash: None,
+            structural_hash: None,
         });
     }
     Ok(out)

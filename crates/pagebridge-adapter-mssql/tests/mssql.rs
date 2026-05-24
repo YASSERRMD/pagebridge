@@ -106,6 +106,8 @@ async fn full_mssql_roundtrip() {
             root_node_id: NodeId::root(&doc),
             leaf_count: 1,
             byte_count: 0,
+            raw_text_hash: None,
+            structural_hash: None,
         })
         .await
         .unwrap();

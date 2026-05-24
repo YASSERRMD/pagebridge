@@ -139,7 +139,38 @@ pub async fn ingest_with_progress(
     if let Some(p) = &progress {
         p.set_stage(IngestStage::Parsing);
     }
+    let _ = (&llm, &prompts, &worker_config); // touched again below
     let built = build_structural(&params)?;
+
+    // Fast path: if a document with this doc_id already exists and the new
+    // raw text hashes to the same value, skip parsing+structural+summary
+    // entirely. Returns a no-op handle and a JoinHandle that resolves
+    // immediately to Ok.
+    let raw_hash = source_hash(&params.raw_text);
+    if let Ok(existing) = storage.list_documents().await {
+        if let Some(prev) = existing.into_iter().find(|d| d.doc_id == built.doc_id) {
+            if prev.raw_text_hash == Some(raw_hash) {
+                if let Some(p) = &progress {
+                    p.note_total_nodes(built.leaf_count);
+                    p.note_structural_done();
+                    p.set_stage(IngestStage::Done);
+                }
+                let handle = DocumentHandle {
+                    doc_id: built.doc_id.clone(),
+                    root_node_id: NodeId::root(&built.doc_id),
+                    leaf_count: built.leaf_count,
+                    byte_count: built.byte_count,
+                    structural_ingest_ms: 0,
+                };
+                let join = tokio::spawn(async move { Ok(()) });
+                tracing::debug!(
+                    doc_id = %built.doc_id,
+                    "skip_on_equivalent fast path hit (raw_text_hash match)"
+                );
+                return Ok((handle, join));
+            }
+        }
+    }
     let root_node_id = NodeId::root(&built.doc_id);
     let doc_id = built.doc_id.clone();
     if let Some(p) = &progress {
@@ -166,6 +197,8 @@ pub async fn ingest_with_progress(
     // into one transaction (50-100x faster on SQLite/Postgres).
     storage.upsert_nodes_batch(&preserved).await?;
     storage.put_raw(&doc_id, &params.raw_text).await?;
+    let raw_hash = source_hash(&params.raw_text);
+    let structural = compute_structural_hash(&preserved);
     storage
         .upsert_document(&DocumentEntry {
             doc_id: doc_id.clone(),
@@ -175,6 +208,8 @@ pub async fn ingest_with_progress(
             root_node_id: root_node_id.clone(),
             leaf_count: built.leaf_count,
             byte_count: built.byte_count,
+            raw_text_hash: Some(raw_hash),
+            structural_hash: Some(structural),
         })
         .await?;
     if let Some(p) = &progress {
@@ -576,6 +611,33 @@ async fn write_updated(
         storage.upsert_node(&updated).await?;
     }
     Ok(())
+}
+
+/// Compute a stable hash over the document's structural skeleton: titles,
+/// levels, and parent-child relationships. Independent of summaries or
+/// byte spans so two ingests of the same document under different LLMs
+/// produce the same structural hash.
+#[must_use]
+pub fn compute_structural_hash(nodes: &[NodeRecord]) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    let mut sorted: Vec<&NodeRecord> = nodes.iter().collect();
+    sorted.sort_by(|a, b| a.node_id.as_str().cmp(b.node_id.as_str()));
+    for n in sorted {
+        hasher.update(n.node_id.as_str().as_bytes());
+        hasher.update([0u8]);
+        hasher.update(n.title.as_bytes());
+        hasher.update([0u8]);
+        hasher.update([n.level as u8]);
+        hasher.update([n.is_leaf as u8]);
+        if let Some(p) = &n.parent_id {
+            hasher.update(p.as_str().as_bytes());
+        }
+        hasher.update([0xff]);
+    }
+    let out = hasher.finalize();
+    let mut arr = [0u8; 32];
+    arr.copy_from_slice(&out);
+    arr
 }
 
 /// SHA-256 of `bytes`.

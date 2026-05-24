@@ -117,6 +117,8 @@ async fn memory_adapter_roundtrip() {
             root_node_id: root.clone(),
             leaf_count: 2,
             byte_count: 0,
+            raw_text_hash: None,
+            structural_hash: None,
         })
         .await
         .unwrap();
