@@ -41,6 +41,10 @@ harness = false
 name = "ingest_throughput"
 harness = false
 
+[[bench]]
+name = "adapter_writes"
+harness = false
+
 [features]
 default = []
 test-mock = []
