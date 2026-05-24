@@ -29,6 +29,24 @@ The result: **no embedding pipeline, no vector index to keep in sync, no separat
 - The LLM picks where to look. Every navigation step is recorded in a `QueryTrace` returned in-band on every `ask`.
 - Async-first **Rust** API, async **Python** bindings, and a **`pagebridge`** CLI with `--json` output for piping.
 
+### Ingest performance (Phase I1-I9 overhaul)
+
+200-page PDF, end-to-end:
+
+| Provider | Default tier | Wall time (target) |
+|---|---|---|
+| Groq (free tier, 30 RPM) | rate-limit bound | 90-150s |
+| Groq (paid tier, 300 RPM) | concurrency 16 | 25-45s |
+| Anthropic Haiku | tier 1 | 60-120s |
+| OpenAI gpt-4o-mini | tier 1 | 60-90s |
+| Local llama.cpp (M2 Pro) | compute bound | 180-300s |
+
+Re-ingest of an identical document: **under 100ms with zero LLM calls.**
+Cache-shared corpora (two docs with overlapping paragraphs): 60%+ hit rate
+on the second ingest.
+
+See [`docs/PERF.md`](docs/PERF.md) for the full tuning matrix.
+
 ---
 
 ## Architecture
