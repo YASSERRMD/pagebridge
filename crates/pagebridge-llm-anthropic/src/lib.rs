@@ -22,7 +22,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::llm::{
-    CompletionRequest, CompletionResponse, FinishReason, LlmConfig, LlmProvider,
+    CompletionRequest, CompletionResponse, FinishReason, LlmConfig, LlmProvider, RateLimits,
 };
 use serde::{Deserialize, Serialize};
 
@@ -40,6 +40,7 @@ pub struct AnthropicProvider {
     model: String,
     config: LlmConfig,
     client: reqwest::Client,
+    rate_limits: RateLimits,
 }
 
 impl AnthropicProvider {
@@ -65,7 +66,16 @@ impl AnthropicProvider {
             model: model.into(),
             config,
             client,
+            rate_limits: RateLimits::anthropic_tier_1(),
         }
+    }
+
+    /// Override the declared rate limits. Defaults to
+    /// [`RateLimits::anthropic_tier_1`].
+    #[must_use]
+    pub fn with_rate_limits(mut self, limits: RateLimits) -> Self {
+        self.rate_limits = limits;
+        self
     }
 
     fn err<E: std::fmt::Display>(&self, ctx: &str, e: E) -> PagebridgeError {
@@ -155,6 +165,10 @@ impl LlmProvider for AnthropicProvider {
     }
     fn model(&self) -> &str {
         &self.model
+    }
+
+    fn rate_limits(&self) -> RateLimits {
+        self.rate_limits
     }
 
     async fn complete(&self, req: CompletionRequest) -> Result<CompletionResponse> {
