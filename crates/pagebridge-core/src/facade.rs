@@ -31,8 +31,8 @@ use crate::search::{navigate, synthesize_answer, NavigationOutcome};
 use crate::trace::TraceBuilder;
 use crate::types::{
     Answer, AnswerChunk, DiffMode, DocumentEntry, DocumentHandle, DocumentIngestHandle,
-    IngestParams, Navigation, NavigationConfig, PagebridgeStats, SearchHit, SourceKind,
-    TraceStorageMode, UpdateParams, UpdateReport,
+    IngestParams, Navigation, NavigationConfig, PagebridgeStats, ReingestPrediction, SearchHit,
+    SourceKind, TraceStorageMode, UpdateParams, UpdateReport,
 };
 use crate::workspace::WorkspaceId;
 
@@ -269,6 +269,48 @@ impl Pagebridge {
             }
             Err(e) => Err(e),
         }
+    }
+
+    /// Predict what would happen if `params` were re-ingested. Returns one
+    /// of the [`ReingestPrediction`] variants so CLI and admin UIs can show
+    /// "no work required" / "X leaves changed" / "full re-ingest" before the
+    /// caller commits to the expensive call.
+    pub async fn would_reingest_change(
+        &self,
+        params: &IngestParams,
+    ) -> Result<ReingestPrediction> {
+        use crate::ingest::source_hash;
+        let raw_hash = source_hash(&params.raw_text);
+        let target_doc = params
+            .doc_id
+            .clone()
+            .ok_or_else(|| PagebridgeError::InvalidArgument("doc_id required".into()))?;
+        let existing = self
+            .inner
+            .storage
+            .list_documents()
+            .await?
+            .into_iter()
+            .find(|d| d.doc_id == target_doc);
+        let Some(prev) = existing else {
+            return Ok(ReingestPrediction::FullChange);
+        };
+        if prev.raw_text_hash == Some(raw_hash) {
+            return Ok(ReingestPrediction::NoChange);
+        }
+        // Compare leaf counts as a cheap proxy for the diff size.
+        let built = crate::ingest::build_structural(params)?;
+        let new_leaf = built.leaf_count;
+        let prev_leaf = prev.leaf_count;
+        if new_leaf == prev_leaf {
+            // Same leaf count + different raw hash => likely partial content
+            // change; we report at most leaf_count as changed.
+            return Ok(ReingestPrediction::PartialContent {
+                changed_leaf_count: new_leaf,
+                total_leaves: new_leaf,
+            });
+        }
+        Ok(ReingestPrediction::FullChange)
     }
 
     /// Update an existing document in place.
