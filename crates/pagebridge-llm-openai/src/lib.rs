@@ -24,7 +24,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::llm::{
-    CompletionRequest, CompletionResponse, FinishReason, LlmConfig, LlmProvider,
+    CompletionRequest, CompletionResponse, FinishReason, LlmConfig, LlmProvider, RateLimits,
 };
 use serde::{Deserialize, Serialize};
 
@@ -37,12 +37,15 @@ pub struct OpenAiCompatibleProvider {
     model: String,
     config: LlmConfig,
     client: reqwest::Client,
+    rate_limits: RateLimits,
 }
 
 impl OpenAiCompatibleProvider {
-    /// Connect to OpenAI proper with the given API key.
+    /// Connect to OpenAI proper with the given API key. Pre-loaded with
+    /// [`RateLimits::openai_tier_1`].
     pub fn openai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::custom("https://api.openai.com", Some(api_key.into()), model)
+            .with_rate_limits(RateLimits::openai_tier_1())
     }
 
     /// Connect to a custom OpenAI-compatible server.
@@ -64,9 +67,13 @@ impl OpenAiCompatibleProvider {
         Self::custom("http://localhost:1234", None, model)
     }
 
-    /// Connect to Groq (OpenAI-compatible) with the given API key.
+    /// Connect to Groq (OpenAI-compatible) with the given API key. Pre-loaded
+    /// with [`RateLimits::groq_free`]; call
+    /// [`OpenAiCompatibleProvider::with_rate_limits`] to switch to
+    /// [`RateLimits::groq_paid`] when on a paid plan.
     pub fn groq(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::custom("https://api.groq.com/openai", Some(api_key.into()), model)
+            .with_rate_limits(RateLimits::groq_free())
     }
 
     /// Connect to Cerebras (OpenAI-compatible) with the given API key.
@@ -131,7 +138,16 @@ impl OpenAiCompatibleProvider {
             model: model.into(),
             config,
             client,
+            rate_limits: RateLimits::unlimited(),
         }
+    }
+
+    /// Override the declared rate limits. Use one of the
+    /// [`RateLimits`] presets (`groq_free`, `groq_paid`, `openai_tier_1`, etc).
+    #[must_use]
+    pub fn with_rate_limits(mut self, limits: RateLimits) -> Self {
+        self.rate_limits = limits;
+        self
     }
 
     fn err<E: std::fmt::Display>(&self, ctx: &str, e: E) -> PagebridgeError {
@@ -209,6 +225,10 @@ impl LlmProvider for OpenAiCompatibleProvider {
 
     async fn complete(&self, req: CompletionRequest) -> Result<CompletionResponse> {
         do_chat(self, &req, false).await
+    }
+
+    fn rate_limits(&self) -> RateLimits {
+        self.rate_limits
     }
 
     async fn complete_json(
