@@ -29,6 +29,12 @@ pdf-extract.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 proptest.workspace = true
+criterion = { workspace = true }
+async-trait = { workspace = true }
+
+[[bench]]
+name = "ingest_parallel"
+harness = false
 
 [features]
 default = []
