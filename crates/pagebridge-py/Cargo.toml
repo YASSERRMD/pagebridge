@@ -10,7 +10,11 @@ description = "Python bindings for pagebridge"
 
 [lib]
 name = "_pagebridge"
-crate-type = ["rlib", "cdylib"]
+# Only `cdylib` so pyo3's `extension-module` feature can suppress libpython
+# linkage. The `rlib` form would force a Python-symbol link at build time,
+# which fails on CI runners that don't ship a python-config-discoverable
+# libpython (e.g. macos-latest GitHub Actions).
+crate-type = ["cdylib"]
 
 [dependencies]
 pagebridge = { workspace = true, features = ["sqlite", "embedded", "jsonfile", "ollama", "openai", "anthropic"] }
