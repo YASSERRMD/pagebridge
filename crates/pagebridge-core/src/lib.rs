@@ -38,7 +38,7 @@ pub use llm::{
     LlmConfig, LlmProvider, RateLimits, StreamChunk, VisionImage,
 };
 pub use llm_policy::{
-    CircuitBreaker, CircuitBreakerConfig, LlmCallPolicy, RetryClass,
+    parse_retry_after, CircuitBreaker, CircuitBreakerConfig, LlmCallPolicy, RetryClass,
 };
 pub use prompts::{PromptContext, PromptLibrary};
 pub use replication::{

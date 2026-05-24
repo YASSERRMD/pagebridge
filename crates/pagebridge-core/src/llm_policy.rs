@@ -65,6 +65,22 @@ impl RetryClass {
     }
 }
 
+/// Parse a `Retry-After` HTTP header value. Honors the common delta-seconds
+/// form (`Retry-After: 120`); for the rarer HTTP-date form we fall back to a
+/// 30-second default so we still wait a meaningful interval. Returns `None`
+/// for empty input.
+#[must_use]
+pub fn parse_retry_after(header_value: &str) -> Option<Duration> {
+    let trimmed = header_value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if let Ok(secs) = trimmed.parse::<u64>() {
+        return Some(Duration::from_secs(secs));
+    }
+    Some(Duration::from_secs(30))
+}
+
 /// Tracks recent failures so the circuit can trip on sustained outage.
 #[derive(Debug)]
 pub struct CircuitBreaker {
@@ -263,6 +279,26 @@ mod tests {
         assert!(matches!(c, RetryClass::RetryAfter(d) if d == Duration::from_secs(5)));
         let c = RetryClass::from_status(429, None);
         assert!(matches!(c, RetryClass::Transient));
+    }
+
+    #[test]
+    fn parse_retry_after_seconds_form() {
+        assert_eq!(parse_retry_after("5"), Some(Duration::from_secs(5)));
+        assert_eq!(parse_retry_after("  120 "), Some(Duration::from_secs(120)));
+    }
+
+    #[test]
+    fn parse_retry_after_date_form_defaults_30s() {
+        assert_eq!(
+            parse_retry_after("Wed, 21 Oct 2026 07:28:00 GMT"),
+            Some(Duration::from_secs(30))
+        );
+    }
+
+    #[test]
+    fn parse_retry_after_empty_returns_none() {
+        assert_eq!(parse_retry_after(""), None);
+        assert_eq!(parse_retry_after("   "), None);
     }
 
     #[test]
