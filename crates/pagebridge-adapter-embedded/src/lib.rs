@@ -15,7 +15,9 @@
 )]
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use pagebridge_core::adapter::StorageAdapter;
@@ -46,6 +48,64 @@ struct TantivyFields {
     level: Field,
 }
 
+/// Knobs for the lazy tantivy commit scheduler.
+#[derive(Debug, Clone, Copy)]
+pub struct CommitSchedulerConfig {
+    /// Commit after this many dirty documents have accumulated.
+    pub max_dirty_docs: u64,
+    /// Commit if at least this long has elapsed since the last commit.
+    pub max_dirty_age: Duration,
+}
+
+impl Default for CommitSchedulerConfig {
+    fn default() -> Self {
+        Self {
+            max_dirty_docs: 500,
+            max_dirty_age: Duration::from_secs(2),
+        }
+    }
+}
+
+/// Tracks dirty-doc count and last-commit timestamp so the adapter can decide
+/// when a tantivy commit is overdue. Cheap to clone via `Arc`.
+#[derive(Debug)]
+pub(crate) struct CommitScheduler {
+    pub(crate) dirty_count: AtomicU64,
+    pub(crate) last_commit_at: Mutex<Instant>,
+    pub(crate) config: CommitSchedulerConfig,
+}
+
+impl CommitScheduler {
+    pub(crate) fn new(config: CommitSchedulerConfig) -> Arc<Self> {
+        Arc::new(Self {
+            dirty_count: AtomicU64::new(0),
+            last_commit_at: Mutex::new(Instant::now()),
+            config,
+        })
+    }
+
+    /// Notify the scheduler that one document was added without committing.
+    pub(crate) fn mark_dirty(&self, n: u64) {
+        self.dirty_count.fetch_add(n, Ordering::SeqCst);
+    }
+
+    /// True when either threshold (count or age) has been crossed.
+    pub(crate) fn should_commit(&self) -> bool {
+        let dirty = self.dirty_count.load(Ordering::SeqCst);
+        if dirty >= self.config.max_dirty_docs {
+            return true;
+        }
+        let last = *self.last_commit_at.lock();
+        last.elapsed() >= self.config.max_dirty_age
+    }
+
+    /// Reset state after a successful commit.
+    pub(crate) fn note_committed(&self) {
+        self.dirty_count.store(0, Ordering::SeqCst);
+        *self.last_commit_at.lock() = Instant::now();
+    }
+}
+
 /// Embedded (redb + tantivy) storage adapter. Cheap to clone via `Arc`.
 pub struct EmbeddedAdapter {
     root: PathBuf,
@@ -54,6 +114,7 @@ pub struct EmbeddedAdapter {
     fields: TantivyFields,
     reader: IndexReader,
     writer: Arc<Mutex<IndexWriter>>,
+    commit_scheduler: Arc<CommitScheduler>,
 }
 
 impl std::fmt::Debug for EmbeddedAdapter {
@@ -101,7 +162,43 @@ impl EmbeddedAdapter {
             fields,
             reader,
             writer: Arc::new(Mutex::new(writer)),
+            commit_scheduler: CommitScheduler::new(CommitSchedulerConfig::default()),
         })
+    }
+
+    /// Open with explicit commit-scheduler tuning. The default cadence
+    /// (500 dirty docs or 2 seconds, whichever comes first) is suitable for
+    /// most workloads.
+    pub fn open_with_commit_config(
+        path: impl AsRef<Path>,
+        commit: CommitSchedulerConfig,
+    ) -> Result<Self> {
+        let mut me = Self::open(path)?;
+        me.commit_scheduler = CommitScheduler::new(commit);
+        Ok(me)
+    }
+
+    /// Force a tantivy commit, regardless of the scheduler's thresholds.
+    /// Reasoners that need search results to be immediately consistent (for
+    /// example after `Pagebridge::ingest_document` returns) call this.
+    pub fn flush_index_sync(&self) -> Result<()> {
+        let mut w = self.writer.lock();
+        w.commit().map_err(|e| adapter_err("flush commit", e))?;
+        drop(w);
+        self.reader
+            .reload()
+            .map_err(|e| adapter_err("flush reader reload", e))?;
+        self.commit_scheduler.note_committed();
+        Ok(())
+    }
+
+    /// Async wrapper around `flush_index_sync` that runs the commit on a
+    /// blocking thread so the runtime keeps moving.
+    pub async fn flush_index(&self) -> Result<()> {
+        let me = self.clone_handle();
+        tokio::task::spawn_blocking(move || me.flush_index_sync())
+            .await
+            .map_err(|e| adapter_err("flush join", e))?
     }
 
     fn raw_path(&self, doc_id: &DocId) -> PathBuf {
@@ -812,6 +909,7 @@ impl EmbeddedAdapter {
             },
             reader: self.reader.clone(),
             writer: Arc::clone(&self.writer),
+            commit_scheduler: Arc::clone(&self.commit_scheduler),
         }
     }
 }
