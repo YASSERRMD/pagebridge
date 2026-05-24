@@ -16,12 +16,16 @@ use crate::llm::RateLimits;
 /// Quota-based RPM limiter built atop the `governor` crate.
 pub type RpmLimiter = RateLimiter<NotKeyed, InMemoryState, DefaultClock>;
 
-/// Bundle the scheduler needs to dispatch LLM calls: an optional RPM limiter
-/// and the effective concurrency cap.
+/// Bundle the scheduler needs to dispatch LLM calls: an optional RPM limiter,
+/// an optional TPM limiter, and the effective concurrency cap.
 pub struct DispatchScheduler {
     pub rpm: Option<Arc<RpmLimiter>>,
     pub tpm: Option<Arc<RpmLimiter>>,
     pub effective_concurrency: u32,
+    /// Consecutive 429-class hits observed by the fan-out. Used to halve the
+    /// effective dispatch rate when a provider starts throttling so the
+    /// retry loop does not produce a thundering herd.
+    pub recent_429s: std::sync::atomic::AtomicU32,
 }
 
 impl DispatchScheduler {
@@ -47,7 +51,29 @@ impl DispatchScheduler {
             rpm,
             tpm,
             effective_concurrency: effective,
+            recent_429s: std::sync::atomic::AtomicU32::new(0),
         }
+    }
+
+    /// Record a 429 event. Used by the adaptive-throttle policy so repeated
+    /// hits within a short window can halve the effective concurrency for a
+    /// cooldown period.
+    pub fn note_throttle(&self) {
+        self.recent_429s
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// Reset the throttle counter (called periodically by the fan-out).
+    pub fn clear_throttle(&self) {
+        self.recent_429s
+            .store(0, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// True when more than `threshold` consecutive 429-class errors have been
+    /// observed since the last reset.
+    #[must_use]
+    pub fn is_storming(&self, threshold: u32) -> bool {
+        self.recent_429s.load(std::sync::atomic::Ordering::SeqCst) >= threshold
     }
 
     /// Await one RPM permit, if a limiter is configured. Returns immediately
