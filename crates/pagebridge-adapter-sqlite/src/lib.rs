@@ -638,6 +638,45 @@ impl StorageAdapter for SqliteAdapter {
         Ok(Some(entry))
     }
 
+    async fn get_summary_caches_batch(
+        &self,
+        hashes: &[[u8; 32]],
+    ) -> Result<std::collections::HashMap<[u8; 32], SummaryCacheEntry>> {
+        if hashes.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+        // SQLite has a SQLITE_MAX_VARIABLE_NUMBER cap (~999); chunk to be safe.
+        let mut out = std::collections::HashMap::with_capacity(hashes.len());
+        for chunk in hashes.chunks(500) {
+            let placeholders: Vec<&str> = chunk.iter().map(|_| "?").collect();
+            let sql = format!(
+                "SELECT source_hash, entry FROM pagebridge_summary_cache WHERE source_hash IN ({})",
+                placeholders.join(",")
+            );
+            let mut q = sqlx::query(&sql);
+            for h in chunk {
+                q = q.bind(&h[..]);
+            }
+            let rows = q
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| err("batch get_summary_cache", e))?;
+            for row in rows {
+                let hbytes: Vec<u8> =
+                    row.try_get("source_hash").map_err(|e| err("col hash", e))?;
+                let mut harr = [0u8; 32];
+                if hbytes.len() == 32 {
+                    harr.copy_from_slice(&hbytes);
+                }
+                let blob: Vec<u8> = row.try_get("entry").map_err(|e| err("col entry", e))?;
+                let entry: SummaryCacheEntry =
+                    serde_json::from_slice(&blob).map_err(|e| err("decode cache", e))?;
+                out.insert(harr, entry);
+            }
+        }
+        Ok(out)
+    }
+
     async fn upsert_summary_cache(&self, hash: &[u8; 32], entry: &SummaryCacheEntry) -> Result<()> {
         let blob = serde_json::to_vec(entry).map_err(|e| err("encode cache", e))?;
         sqlx::query(

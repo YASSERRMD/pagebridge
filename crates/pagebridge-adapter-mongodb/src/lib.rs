@@ -553,6 +553,59 @@ impl StorageAdapter for MongoAdapter {
         Ok(Some(entry))
     }
 
+    async fn get_summary_caches_batch(
+        &self,
+        hashes: &[[u8; 32]],
+    ) -> Result<std::collections::HashMap<[u8; 32], SummaryCacheEntry>> {
+        if hashes.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+        let ids: Vec<Bson> = hashes
+            .iter()
+            .map(|h| {
+                Bson::Binary(Binary {
+                    subtype: mongodb::bson::spec::BinarySubtype::Generic,
+                    bytes: h.to_vec(),
+                })
+            })
+            .collect();
+        let mut cursor = self
+            .summary_cache()
+            .find(doc! { "_id": { "$in": ids } })
+            .await
+            .map_err(|e| err("batch get_summary_cache", e))?;
+        let mut out = std::collections::HashMap::with_capacity(hashes.len());
+        use futures::TryStreamExt;
+        while let Some(d) = cursor
+            .try_next()
+            .await
+            .map_err(|e| err("cursor next", e))?
+        {
+            let id_bson = d.get("_id").ok_or_else(|| err("col _id", "missing"))?;
+            let hbytes = if let Bson::Binary(Binary { bytes, .. }) = id_bson {
+                bytes.clone()
+            } else {
+                continue;
+            };
+            let mut harr = [0u8; 32];
+            if hbytes.len() == 32 {
+                harr.copy_from_slice(&hbytes);
+            } else {
+                continue;
+            }
+            let entry_bson = d.get("entry").ok_or_else(|| err("col entry", "missing"))?;
+            let bytes = if let Bson::Binary(Binary { bytes, .. }) = entry_bson {
+                bytes.clone()
+            } else {
+                continue;
+            };
+            let entry: SummaryCacheEntry =
+                serde_json::from_slice(&bytes).map_err(|e| err("decode cache", e))?;
+            out.insert(harr, entry);
+        }
+        Ok(out)
+    }
+
     async fn upsert_summary_cache(&self, hash: &[u8; 32], entry: &SummaryCacheEntry) -> Result<()> {
         let bytes = serde_json::to_vec(entry).map_err(|e| err("encode cache", e))?;
         let id = Binary {

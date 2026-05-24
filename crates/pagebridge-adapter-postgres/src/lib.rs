@@ -588,6 +588,37 @@ impl StorageAdapter for PostgresAdapter {
         Ok(Some(entry))
     }
 
+    async fn get_summary_caches_batch(
+        &self,
+        hashes: &[[u8; 32]],
+    ) -> Result<std::collections::HashMap<[u8; 32], SummaryCacheEntry>> {
+        if hashes.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+        // Postgres takes a BYTEA[] easily via ANY($1).
+        let owned: Vec<Vec<u8>> = hashes.iter().map(|h| h.to_vec()).collect();
+        let rows = sqlx::query(
+            "SELECT source_hash, entry FROM pagebridge_summary_cache WHERE source_hash = ANY($1)",
+        )
+        .bind(&owned)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| err("batch get_summary_cache", e))?;
+        let mut out = std::collections::HashMap::with_capacity(rows.len());
+        for row in rows {
+            let hbytes: Vec<u8> = row.try_get("source_hash").map_err(|e| err("col hash", e))?;
+            let mut harr = [0u8; 32];
+            if hbytes.len() == 32 {
+                harr.copy_from_slice(&hbytes);
+            }
+            let blob: Vec<u8> = row.try_get("entry").map_err(|e| err("col entry", e))?;
+            let entry: SummaryCacheEntry =
+                serde_json::from_slice(&blob).map_err(|e| err("decode cache", e))?;
+            out.insert(harr, entry);
+        }
+        Ok(out)
+    }
+
     async fn upsert_summary_cache(&self, hash: &[u8; 32], entry: &SummaryCacheEntry) -> Result<()> {
         let blob = serde_json::to_vec(entry).map_err(|e| err("encode cache", e))?;
         sqlx::query(

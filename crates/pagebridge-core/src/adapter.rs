@@ -117,6 +117,24 @@ pub trait StorageAdapter: Send + Sync + 'static {
     /// Look up a cached summary by source content hash.
     async fn get_summary_cache(&self, hash: &[u8; 32]) -> Result<Option<SummaryCacheEntry>>;
 
+    /// Batch summary-cache lookup. Returns one map entry per hash that exists
+    /// (missing hashes simply don't appear). Adapters MUST implement this
+    /// efficiently for production (one SELECT WHERE hash IN (...), one
+    /// `find` with `$in`, one prefix scan, etc.). The default delegates to
+    /// `get_summary_cache` so adapters that do not override stay correct.
+    async fn get_summary_caches_batch(
+        &self,
+        hashes: &[[u8; 32]],
+    ) -> Result<std::collections::HashMap<[u8; 32], SummaryCacheEntry>> {
+        let mut out = std::collections::HashMap::with_capacity(hashes.len());
+        for h in hashes {
+            if let Some(entry) = self.get_summary_cache(h).await? {
+                out.insert(*h, entry);
+            }
+        }
+        Ok(out)
+    }
+
     /// Store a cached summary.
     async fn upsert_summary_cache(&self, hash: &[u8; 32], entry: &SummaryCacheEntry) -> Result<()>;
 
@@ -359,6 +377,19 @@ pub mod memory {
 
         async fn get_summary_cache(&self, hash: &[u8; 32]) -> Result<Option<SummaryCacheEntry>> {
             Ok(self.summary_cache.get(hash).map(|r| r.value().clone()))
+        }
+
+        async fn get_summary_caches_batch(
+            &self,
+            hashes: &[[u8; 32]],
+        ) -> Result<std::collections::HashMap<[u8; 32], SummaryCacheEntry>> {
+            let mut out = std::collections::HashMap::with_capacity(hashes.len());
+            for h in hashes {
+                if let Some(r) = self.summary_cache.get(h) {
+                    out.insert(*h, r.value().clone());
+                }
+            }
+            Ok(out)
         }
 
         async fn upsert_summary_cache(

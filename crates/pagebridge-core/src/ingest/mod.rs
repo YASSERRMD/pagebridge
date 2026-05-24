@@ -147,9 +147,24 @@ pub async fn ingest_with_progress(
         p.set_stage(IngestStage::StructuralInsert);
     }
 
+    // Preserve prior summaries on re-ingest. The structural builder always
+    // emits empty summaries; if the same node_id already exists with a
+    // populated summary + source_hash, the pre-flight cache lookup downstream
+    // can use that hash to skip the LLM call entirely.
+    let mut preserved = built.nodes;
+    for n in preserved.iter_mut() {
+        if !n.is_leaf {
+            if let Ok(Some(prev)) = storage.get_node(&n.node_id).await {
+                if prev.source_hash != [0u8; 32] {
+                    n.source_hash = prev.source_hash;
+                }
+            }
+        }
+    }
+
     // Use the explicit batch API so storage backends collapse 250 inserts
     // into one transaction (50-100x faster on SQLite/Postgres).
-    storage.upsert_nodes_batch(&built.nodes).await?;
+    storage.upsert_nodes_batch(&preserved).await?;
     storage.put_raw(&doc_id, &params.raw_text).await?;
     storage
         .upsert_document(&DocumentEntry {
@@ -178,7 +193,7 @@ pub async fn ingest_with_progress(
     let storage2 = Arc::clone(&storage);
     let llm2 = Arc::clone(&llm);
     let prompts2 = Arc::clone(&prompts);
-    let nodes = built.nodes;
+    let nodes = preserved;
     let progress_for_task = progress.clone();
     let join = tokio::spawn(async move {
         let r = summarize_document_parallel(
@@ -256,8 +271,50 @@ async fn summarize_document_parallel(
     for (depth, level_nodes) in by_depth.into_iter().rev() {
         let level_size = level_nodes.len();
         tracing::trace!(depth, level_size, "summarizing level");
-        let mut handles = Vec::with_capacity(level_size);
+
+        // Pre-flight cache lookup keyed on the node's own source_hash field.
+        // For re-ingest of an unchanged document the cache holds an entry
+        // under each leaf/section's content hash; we can apply it directly
+        // without ever calling the LLM. Misses go through the LLM path below
+        // which will populate the cache for next time.
+        let hashes: Vec<[u8; 32]> = level_nodes
+            .iter()
+            .filter(|n| !n.is_leaf && n.source_hash != [0u8; 32])
+            .map(|n| n.source_hash)
+            .collect();
+        let preflight = if hashes.is_empty() {
+            std::collections::HashMap::new()
+        } else {
+            match storage.get_summary_caches_batch(&hashes).await {
+                Ok(map) => map,
+                Err(e) => {
+                    tracing::warn!(error = %e, "pre-flight cache lookup failed; falling through");
+                    std::collections::HashMap::new()
+                }
+            }
+        };
+
+        let mut to_summarize = Vec::with_capacity(level_size);
         for node in level_nodes {
+            if !node.is_leaf
+                && node.source_hash != [0u8; 32]
+                && preflight
+                    .get(&node.source_hash)
+                    .is_some_and(|e| e.model_fingerprint == fingerprint)
+            {
+                let entry = preflight.get(&node.source_hash).expect("checked above");
+                let updated = apply_cache_entry(&node, entry);
+                let _ = writer_tx.send(updated).await;
+                if let Some(p) = &progress {
+                    p.note_cache_hit();
+                    p.broadcast();
+                }
+                continue;
+            }
+            to_summarize.push(node);
+        }
+        let mut handles = Vec::with_capacity(to_summarize.len());
+        for node in to_summarize {
             let Ok(permit) = semaphore.clone().acquire_owned().await else {
                 break;
             };
@@ -352,6 +409,23 @@ async fn summarize_document_parallel(
         tracing::warn!(error = %e, "post-summary flush failed");
     }
     Ok(())
+}
+
+/// Merge a [`SummaryCacheEntry`] back into a [`NodeRecord`]. Used by the
+/// pre-flight cache fast path to apply a hit without an LLM call.
+fn apply_cache_entry(node: &NodeRecord, entry: &SummaryCacheEntry) -> NodeRecord {
+    let mut updated = node.clone();
+    if !entry.routing_summary.is_empty() {
+        updated.routing_summary = entry.routing_summary.clone();
+    }
+    if updated.summary.is_empty() || updated.summary == updated.routing_summary {
+        updated.summary = entry.summary.clone();
+    }
+    if updated.keywords.is_empty() {
+        updated.keywords = entry.keywords.clone();
+    }
+    updated.updated_at = now_ms();
+    updated
 }
 
 /// Group nodes by tree depth. Returned map is keyed by `node_id.depth()`,
@@ -475,6 +549,9 @@ async fn summarize_one_node(
     if updated.keywords.is_empty() {
         updated.keywords = entry.keywords;
     }
+    // Persist the payload hash on the node so re-ingest's pre-flight cache
+    // lookup (Phase I7) can short-circuit without recomputing the payload.
+    updated.source_hash = payload_hash;
     updated.updated_at = now_ms();
     write_updated(storage, writer_tx, updated).await?;
     Ok(())
