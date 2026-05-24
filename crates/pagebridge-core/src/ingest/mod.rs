@@ -225,9 +225,10 @@ async fn summarize_document_parallel(
             let fingerprint = fingerprint.clone();
             let dispatch_ref = Arc::clone(&dispatch);
             let writer_tx = writer_tx.clone();
+            let task_timeout = std::time::Duration::from_millis(config.timeout_per_task_ms);
             let handle = tokio::spawn(async move {
                 let _permit = permit;
-                summarize_one_node(
+                let fut = summarize_one_node(
                     &storage,
                     &llm,
                     &prompts,
@@ -235,8 +236,20 @@ async fn summarize_document_parallel(
                     &fingerprint,
                     Some(&dispatch_ref),
                     Some(&writer_tx),
-                )
-                .await
+                );
+                match tokio::time::timeout(task_timeout, fut).await {
+                    Ok(r) => r,
+                    Err(_) => {
+                        // Per-task timeout fired. Note as a soft throttle so
+                        // the scheduler backs off if these repeat.
+                        dispatch_ref.note_throttle();
+                        tracing::warn!(
+                            timeout_ms = task_timeout.as_millis() as u64,
+                            "summary task per-call timeout exceeded"
+                        );
+                        Ok(())
+                    }
+                }
             });
             handles.push(handle);
         }
