@@ -39,6 +39,9 @@ pub mod markdown;
 pub mod pdf;
 pub mod plain;
 pub mod tree;
+pub mod worker;
+
+pub use worker::{SummaryTask, SummaryWorkerConfig};
 
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};

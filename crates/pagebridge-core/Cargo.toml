@@ -21,6 +21,8 @@ dashmap.workspace = true
 parking_lot.workspace = true
 tracing.workspace = true
 tokio = { workspace = true, features = ["sync", "macros", "rt"] }
+async-channel = { workspace = true }
+futures-util = { workspace = true }
 pdf-extract.workspace = true
 
 [dev-dependencies]
