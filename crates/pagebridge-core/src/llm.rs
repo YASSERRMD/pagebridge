@@ -286,6 +286,16 @@ pub trait LlmProvider: Send + Sync + 'static {
         let words = text.split_whitespace().count();
         words * 4 / 3
     }
+
+    /// Declared rate limits for this provider instance. Pagebridge's ingest
+    /// scheduler uses these to schedule LLM calls without triggering the
+    /// provider's HTTP-level throttling. The default is
+    /// [`RateLimits::unlimited`], which means "trust the caller to manage
+    /// concurrency". Override in concrete providers to opt into the
+    /// scheduler-side governor.
+    fn rate_limits(&self) -> RateLimits {
+        RateLimits::unlimited()
+    }
 }
 
 /// Deterministic mock provider for tests. Returns canned responses or echoes
