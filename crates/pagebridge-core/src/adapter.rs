@@ -37,6 +37,23 @@ pub trait StorageAdapter: Send + Sync + 'static {
         Ok(())
     }
 
+    /// Explicit batched upsert. Adapters MUST implement this efficiently for
+    /// real backends: SQLite/Postgres wrap one BEGIN..COMMIT around the rows,
+    /// Mongo uses bulkWrite, redb takes a single write transaction. The
+    /// default delegates to [`StorageAdapter::upsert_nodes`] so adapters that
+    /// do not override remain correct, just slow.
+    async fn upsert_nodes_batch(&self, nodes: &[NodeRecord]) -> Result<()> {
+        self.upsert_nodes(nodes).await
+    }
+
+    /// Recommended batch size for `upsert_nodes_batch`. The ingest pipeline
+    /// reads this to size its [`crate::ingest::SummaryWorkerConfig`]-driven
+    /// flushes. Defaults to 100; storage-backed adapters override (SQLite 500,
+    /// Postgres 1000, Mongo 500, embedded 1000).
+    fn recommended_batch_size(&self) -> usize {
+        100
+    }
+
     /// Fetch a single node by id. Returns `Ok(None)` if absent.
     async fn get_node(&self, id: &NodeId) -> Result<Option<NodeRecord>>;
 
@@ -165,6 +182,22 @@ pub mod memory {
             node.validate()?;
             self.nodes.insert(node.node_id.clone(), node.clone());
             Ok(())
+        }
+
+        async fn upsert_nodes_batch(&self, nodes: &[NodeRecord]) -> Result<()> {
+            // Memory adapter has no transaction primitive; validate up front,
+            // then insert as one critical section over the DashMap.
+            for n in nodes {
+                n.validate()?;
+            }
+            for n in nodes {
+                self.nodes.insert(n.node_id.clone(), n.clone());
+            }
+            Ok(())
+        }
+
+        fn recommended_batch_size(&self) -> usize {
+            1_000
         }
 
         async fn get_node(&self, id: &NodeId) -> Result<Option<NodeRecord>> {

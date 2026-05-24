@@ -144,6 +144,54 @@ impl EmbeddedAdapter {
         Ok(())
     }
 
+    fn upsert_nodes_batch_sync(&self, nodes: &[NodeRecord]) -> Result<()> {
+        if nodes.is_empty() {
+            return Ok(());
+        }
+        for n in nodes {
+            n.validate()?;
+        }
+        // One redb write transaction for the whole batch.
+        let tx = self
+            .db
+            .begin_write()
+            .map_err(|e| adapter_err("batch begin write", e))?;
+        {
+            let mut tbl = tx
+                .open_table(NODES)
+                .map_err(|e| adapter_err("batch open nodes", e))?;
+            for node in nodes {
+                let encoded = bincode::serialize(node)
+                    .map_err(|e| PagebridgeError::Serde(format!("encode node: {e}")))?;
+                tbl.insert(node.node_id.as_str(), encoded)
+                    .map_err(|e| adapter_err("batch insert node", e))?;
+            }
+        }
+        tx.commit().map_err(|e| adapter_err("batch commit", e))?;
+
+        // One tantivy commit at the end so per-node segment flushes don't
+        // dominate the wall time. Lazy commit cadence is owned by Phase I4;
+        // here we just collapse N commits into one.
+        let mut writer = self.writer.lock();
+        for node in nodes {
+            writer.delete_term(Term::from_field_text(
+                self.fields.node_id,
+                node.node_id.as_str(),
+            ));
+            writer
+                .add_document(self.build_doc(node))
+                .map_err(|e| adapter_err("batch tantivy add", e))?;
+        }
+        writer
+            .commit()
+            .map_err(|e| adapter_err("batch tantivy commit", e))?;
+        drop(writer);
+        self.reader
+            .reload()
+            .map_err(|e| adapter_err("reader reload", e))?;
+        Ok(())
+    }
+
     fn build_doc(&self, node: &NodeRecord) -> TantivyDocument {
         let mut doc = TantivyDocument::default();
         doc.add_text(self.fields.node_id, node.node_id.as_str());
@@ -330,6 +378,18 @@ impl StorageAdapter for EmbeddedAdapter {
         tokio::task::spawn_blocking(move || me.upsert_node_sync(&node))
             .await
             .map_err(|e| adapter_err("join", e))?
+    }
+
+    async fn upsert_nodes_batch(&self, nodes: &[NodeRecord]) -> Result<()> {
+        let me = self.clone_handle();
+        let nodes = nodes.to_vec();
+        tokio::task::spawn_blocking(move || me.upsert_nodes_batch_sync(&nodes))
+            .await
+            .map_err(|e| adapter_err("batch join", e))?
+    }
+
+    fn recommended_batch_size(&self) -> usize {
+        1_000
     }
 
     async fn get_node(&self, id: &NodeId) -> Result<Option<NodeRecord>> {

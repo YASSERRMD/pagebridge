@@ -250,6 +250,81 @@ impl StorageAdapter for PostgresAdapter {
         Ok(())
     }
 
+    async fn upsert_nodes_batch(&self, nodes: &[NodeRecord]) -> Result<()> {
+        if nodes.is_empty() {
+            return Ok(());
+        }
+        for n in nodes {
+            n.validate()?;
+        }
+        let mut tx = self.pool.begin().await.map_err(|e| err("batch tx", e))?;
+        for node in nodes {
+            let child_ids: Vec<String> = node
+                .child_ids
+                .iter()
+                .map(|c| c.as_str().to_owned())
+                .collect();
+            let child_ids_json = sqlx::types::Json(child_ids);
+            let keywords_json = sqlx::types::Json(node.keywords.clone());
+            sqlx::query(
+                "INSERT INTO pagebridge_nodes (
+                    node_id, doc_id, parent_id, title, level, routing_summary, summary, child_ids,
+                    span_start, span_end, page_start, page_end, keywords, is_leaf, created_at,
+                    updated_at, source_hash, search_vec
+                 ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
+                    setweight(to_tsvector('english', $4), 'A') ||
+                    setweight(to_tsvector('english', $6), 'B') ||
+                    setweight(to_tsvector('english', $7), 'C') ||
+                    setweight(to_tsvector('english', $18), 'D'))
+                 ON CONFLICT (node_id) DO UPDATE SET
+                    doc_id = EXCLUDED.doc_id,
+                    parent_id = EXCLUDED.parent_id,
+                    title = EXCLUDED.title,
+                    level = EXCLUDED.level,
+                    routing_summary = EXCLUDED.routing_summary,
+                    summary = EXCLUDED.summary,
+                    child_ids = EXCLUDED.child_ids,
+                    span_start = EXCLUDED.span_start,
+                    span_end = EXCLUDED.span_end,
+                    page_start = EXCLUDED.page_start,
+                    page_end = EXCLUDED.page_end,
+                    keywords = EXCLUDED.keywords,
+                    is_leaf = EXCLUDED.is_leaf,
+                    created_at = EXCLUDED.created_at,
+                    updated_at = EXCLUDED.updated_at,
+                    source_hash = EXCLUDED.source_hash,
+                    search_vec = EXCLUDED.search_vec",
+            )
+            .bind(node.node_id.as_str())
+            .bind(node.doc_id.as_str())
+            .bind(node.parent_id.as_ref().map(|p| p.as_str().to_owned()))
+            .bind(&node.title)
+            .bind(level_to_i32(node.level))
+            .bind(&node.routing_summary)
+            .bind(&node.summary)
+            .bind(child_ids_json)
+            .bind(node.span.map(|(a, _)| a as i64))
+            .bind(node.span.map(|(_, b)| b as i64))
+            .bind(node.page_start.map(|v| v as i32))
+            .bind(node.page_end.map(|v| v as i32))
+            .bind(keywords_json)
+            .bind(node.is_leaf)
+            .bind(node.created_at)
+            .bind(node.updated_at)
+            .bind(&node.source_hash[..])
+            .bind(node.keywords.join(" "))
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| err("batch upsert_node", e))?;
+        }
+        tx.commit().await.map_err(|e| err("batch commit", e))?;
+        Ok(())
+    }
+
+    fn recommended_batch_size(&self) -> usize {
+        1_000
+    }
+
     async fn get_node(&self, id: &NodeId) -> Result<Option<NodeRecord>> {
         let row = sqlx::query("SELECT * FROM pagebridge_nodes WHERE node_id = $1")
             .bind(id.as_str())

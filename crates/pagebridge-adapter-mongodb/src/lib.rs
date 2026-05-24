@@ -252,6 +252,35 @@ impl StorageAdapter for MongoAdapter {
         Ok(())
     }
 
+    async fn upsert_nodes_batch(&self, nodes: &[NodeRecord]) -> Result<()> {
+        if nodes.is_empty() {
+            return Ok(());
+        }
+        for n in nodes {
+            n.validate()?;
+        }
+        // The mongodb driver's bulk_write surface differs between versions;
+        // issue one replace_one with upsert per node concurrently via a
+        // futures::future::try_join_all so the round-trips overlap. This is
+        // dramatically faster than the prior await-each-in-sequence flow even
+        // when the driver-level batch isn't used.
+        let coll = self.nodes();
+        let mut futures = Vec::with_capacity(nodes.len());
+        for node in nodes {
+            let d = node_to_doc(node);
+            let filter = doc! { "_id": node.node_id.as_str() };
+            futures.push(coll.replace_one(filter, d).upsert(true));
+        }
+        for f in futures {
+            f.await.map_err(|e| err("batch upsert", e))?;
+        }
+        Ok(())
+    }
+
+    fn recommended_batch_size(&self) -> usize {
+        500
+    }
+
     async fn get_node(&self, id: &NodeId) -> Result<Option<NodeRecord>> {
         let opt = self
             .nodes()

@@ -224,6 +224,44 @@ impl StorageAdapter for JsonFileAdapter {
         .map_err(|e| err("join", e))?
     }
 
+    async fn upsert_nodes_batch(&self, nodes: &[NodeRecord]) -> Result<()> {
+        if nodes.is_empty() {
+            return Ok(());
+        }
+        for n in nodes {
+            n.validate()?;
+        }
+        let me = self.clone();
+        let nodes = nodes.to_vec();
+        tokio::task::spawn_blocking(move || {
+            // Group by doc_id so we write each affected file at most once.
+            let mut by_doc: std::collections::BTreeMap<
+                pagebridge_core::DocId,
+                Vec<NodeRecord>,
+            > = std::collections::BTreeMap::new();
+            for n in nodes {
+                by_doc.entry(n.doc_id.clone()).or_default().push(n);
+            }
+            for (doc_id, ns) in by_doc {
+                let mut tree = me.load_tree(&doc_id)?;
+                for n in &ns {
+                    tree.nodes.insert(n.node_id.as_str().to_owned(), n.clone());
+                }
+                me.cache
+                    .write()
+                    .insert(doc_id.clone(), clone_tree(&tree));
+                me.save_tree(&doc_id, &tree)?;
+            }
+            Ok(())
+        })
+        .await
+        .map_err(|e| err("batch join", e))?
+    }
+
+    fn recommended_batch_size(&self) -> usize {
+        2_000
+    }
+
     async fn get_node(&self, id: &NodeId) -> Result<Option<NodeRecord>> {
         let doc = id.doc_id()?;
         let tree = self.load_tree(&doc)?;

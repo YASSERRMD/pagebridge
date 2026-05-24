@@ -288,6 +288,89 @@ impl StorageAdapter for SqliteAdapter {
         Ok(())
     }
 
+    async fn upsert_nodes_batch(&self, nodes: &[NodeRecord]) -> Result<()> {
+        if nodes.is_empty() {
+            return Ok(());
+        }
+        for n in nodes {
+            n.validate()?;
+        }
+        let mut tx = self.pool.begin().await.map_err(|e| err("tx", e))?;
+        for node in nodes {
+            let child_ids_json: Vec<String> = node
+                .child_ids
+                .iter()
+                .map(|c| c.as_str().to_owned())
+                .collect();
+            let child_ids =
+                serde_json::to_string(&child_ids_json).map_err(|e| err("encode kids", e))?;
+            let keywords =
+                serde_json::to_string(&node.keywords).map_err(|e| err("encode kw", e))?;
+            sqlx::query(
+                "INSERT INTO pagebridge_nodes (
+                    node_id, doc_id, parent_id, title, level, routing_summary, summary, child_ids,
+                    span_start, span_end, page_start, page_end, keywords, is_leaf, created_at,
+                    updated_at, source_hash
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(node_id) DO UPDATE SET
+                    doc_id=excluded.doc_id, parent_id=excluded.parent_id, title=excluded.title,
+                    level=excluded.level, routing_summary=excluded.routing_summary,
+                    summary=excluded.summary, child_ids=excluded.child_ids,
+                    span_start=excluded.span_start, span_end=excluded.span_end,
+                    page_start=excluded.page_start, page_end=excluded.page_end,
+                    keywords=excluded.keywords, is_leaf=excluded.is_leaf,
+                    created_at=excluded.created_at, updated_at=excluded.updated_at,
+                    source_hash=excluded.source_hash",
+            )
+            .bind(node.node_id.as_str())
+            .bind(node.doc_id.as_str())
+            .bind(node.parent_id.as_ref().map(|p| p.as_str().to_owned()))
+            .bind(&node.title)
+            .bind(level_to_i64(node.level))
+            .bind(&node.routing_summary)
+            .bind(&node.summary)
+            .bind(child_ids)
+            .bind(node.span.map(|(a, _)| a as i64))
+            .bind(node.span.map(|(_, b)| b as i64))
+            .bind(node.page_start.map(i64::from))
+            .bind(node.page_end.map(i64::from))
+            .bind(keywords)
+            .bind(i64::from(node.is_leaf))
+            .bind(node.created_at)
+            .bind(node.updated_at)
+            .bind(&node.source_hash[..])
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| err("batch upsert node", e))?;
+
+            sqlx::query("DELETE FROM pagebridge_fts WHERE node_id = ?")
+                .bind(node.node_id.as_str())
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| err("batch fts delete", e))?;
+            let kw_text = node.keywords.join(" ");
+            sqlx::query(
+                "INSERT INTO pagebridge_fts (node_id, doc_id, title, routing_summary, summary, keywords)
+                 VALUES (?,?,?,?,?,?)",
+            )
+            .bind(node.node_id.as_str())
+            .bind(node.doc_id.as_str())
+            .bind(&node.title)
+            .bind(&node.routing_summary)
+            .bind(&node.summary)
+            .bind(kw_text)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| err("batch fts insert", e))?;
+        }
+        tx.commit().await.map_err(|e| err("batch commit", e))?;
+        Ok(())
+    }
+
+    fn recommended_batch_size(&self) -> usize {
+        500
+    }
+
     async fn get_node(&self, id: &NodeId) -> Result<Option<NodeRecord>> {
         let row = sqlx::query("SELECT * FROM pagebridge_nodes WHERE node_id = ?")
             .bind(id.as_str())

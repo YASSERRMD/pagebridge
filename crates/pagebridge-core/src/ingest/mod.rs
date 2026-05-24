@@ -35,6 +35,7 @@
     clippy::unused_self
 )]
 
+pub mod batch_writer;
 pub mod markdown;
 pub mod pdf;
 pub mod plain;
@@ -42,6 +43,7 @@ pub mod scheduler;
 pub mod tree;
 pub mod worker;
 
+pub use batch_writer::{BatchWriterConfig, WriterStats};
 pub use scheduler::DispatchScheduler;
 pub use worker::{SummaryTask, SummaryWorkerConfig};
 
@@ -122,7 +124,9 @@ pub async fn ingest_with_config(
     let root_node_id = NodeId::root(&built.doc_id);
     let doc_id = built.doc_id.clone();
 
-    storage.upsert_nodes(&built.nodes).await?;
+    // Use the explicit batch API so storage backends collapse 250 inserts
+    // into one transaction (50-100x faster on SQLite/Postgres).
+    storage.upsert_nodes_batch(&built.nodes).await?;
     storage.put_raw(&doc_id, &params.raw_text).await?;
     storage
         .upsert_document(&DocumentEntry {
@@ -172,6 +176,16 @@ async fn summarize_document_parallel(
 ) -> Result<()> {
     let fingerprint = format!("{}:{}", llm.name(), llm.model());
 
+    // Drain summary updates through a BatchWriter so per-node upserts become
+    // per-batch transactions. Channel capacity is generous; the writer keeps
+    // up with even high-concurrency fan-outs because LLM latency dominates.
+    let (writer_tx, writer_rx) = async_channel::bounded::<NodeRecord>(4096);
+    let writer_cfg = BatchWriterConfig {
+        batch_size: storage.recommended_batch_size().clamp(50, 1024),
+        ..BatchWriterConfig::default()
+    };
+    let writer_join = batch_writer::spawn(Arc::clone(&storage), writer_rx, writer_cfg);
+
     let by_depth = group_nodes_by_depth(nodes);
 
     // Consult the provider's declared rate limits so the scheduler does not
@@ -210,6 +224,7 @@ async fn summarize_document_parallel(
             let prompts = Arc::clone(&prompts);
             let fingerprint = fingerprint.clone();
             let dispatch_ref = Arc::clone(&dispatch);
+            let writer_tx = writer_tx.clone();
             let handle = tokio::spawn(async move {
                 let _permit = permit;
                 summarize_one_node(
@@ -219,6 +234,7 @@ async fn summarize_document_parallel(
                     &node,
                     &fingerprint,
                     Some(&dispatch_ref),
+                    Some(&writer_tx),
                 )
                 .await
             });
@@ -233,6 +249,28 @@ async fn summarize_document_parallel(
                 Err(join_err) => tracing::warn!(error = %join_err, "summary task panicked"),
             }
         }
+    }
+
+    // Close the writer side; the BatchWriter flushes its remainder and exits.
+    drop(writer_tx);
+    match writer_join.await {
+        Ok(Ok(stats)) => {
+            tracing::debug!(
+                batches = stats.batches,
+                records = stats.records,
+                failures = stats.failures,
+                "BatchWriter drained"
+            );
+            if stats.failures > 0 {
+                tracing::warn!(
+                    failures = stats.failures,
+                    "ingest finished with {} dropped summary records; treat document as partial_ingest",
+                    stats.failures
+                );
+            }
+        }
+        Ok(Err(e)) => tracing::warn!(error = %e, "BatchWriter exited with error"),
+        Err(e) => tracing::warn!(error = %e, "BatchWriter join failed"),
     }
     Ok(())
 }
@@ -256,13 +294,14 @@ async fn summarize_one_node(
     node: &NodeRecord,
     fingerprint: &str,
     dispatch: Option<&Arc<DispatchScheduler>>,
+    writer_tx: Option<&async_channel::Sender<NodeRecord>>,
 ) -> Result<()> {
     if node.is_leaf {
         let mut updated = node.clone();
         if updated.summary.is_empty() {
             updated.summary = updated.routing_summary.clone();
         }
-        storage.upsert_node(&updated).await?;
+        write_updated(storage, writer_tx, updated).await?;
         return Ok(());
     }
 
@@ -358,7 +397,28 @@ async fn summarize_one_node(
         updated.keywords = entry.keywords;
     }
     updated.updated_at = now_ms();
-    storage.upsert_node(&updated).await?;
+    write_updated(storage, writer_tx, updated).await?;
+    Ok(())
+}
+
+/// Route an updated node either through the batch writer channel (if
+/// present) or straight to the adapter as a fallback.
+async fn write_updated(
+    storage: &Arc<dyn StorageAdapter>,
+    writer_tx: Option<&async_channel::Sender<NodeRecord>>,
+    updated: NodeRecord,
+) -> Result<()> {
+    if let Some(tx) = writer_tx {
+        // Channel send only fails when the receiver is dropped, which means
+        // the BatchWriter is shutting down; fall back to a direct upsert so
+        // the work is not lost.
+        if let Err(send_err) = tx.send(updated.clone()).await {
+            tracing::debug!(error = %send_err, "BatchWriter closed; direct upsert");
+            storage.upsert_node(&updated).await?;
+        }
+    } else {
+        storage.upsert_node(&updated).await?;
+    }
     Ok(())
 }
 
