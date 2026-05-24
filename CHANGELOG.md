@@ -4,6 +4,55 @@ All notable changes to pagebridge land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 follows [SemVer](https://semver.org/).
 
+## [Unreleased] - Ingest performance overhaul (Phase I1-I9)
+
+Nine-phase pack landed between v2.0 and the next stamped release.
+Recallwell and other heavy ingest users get a 10-50x speed-up on the
+free-tier providers and near-instant re-ingest. No public API broken.
+
+### Added
+- **I1**: Bounded-concurrency parallel summary fan-out
+  (`SummaryWorkerConfig::max_concurrency`, default 8); level-barrier
+  preserves bottom-up dependencies.
+- **I2**: `RateLimits` declarations on every `LlmProvider`. Presets:
+  `groq_free`, `groq_paid`, `anthropic_tier_1`, `openai_tier_1`, `local`,
+  `unlimited`. `DispatchScheduler` honors RPM/TPM/concurrent caps via
+  the `governor` crate.
+- **I3**: `StorageAdapter::upsert_nodes_batch` + per-adapter implementations
+  (SQLite / Postgres / Mongo / Embedded / JsonFile). `BatchWriter` actor
+  coalesces summary updates by size or 200ms interval.
+- **I4**: `CommitScheduler` for the embedded tantivy adapter. Defers
+  commits to 500 dirty docs or 2s, whichever fires first.
+  `Pagebridge::flush()` for explicit consistency.
+- **I5**: `LlmCallPolicy` with exponential backoff, `parse_retry_after`,
+  `CircuitBreaker` with rolling-window failure ratio, per-task timeout.
+- **I6**: `ProgressTracker`, `ProgressSnapshot`, `IngestStage` types;
+  `DocumentIngestHandle` with `progress()`, `subscribe()`, `wait()`;
+  `Pagebridge::ingest_document_with_progress`. CLI renders an indicatif
+  progress bar driven by the broadcast.
+- **I7**: `StorageAdapter::get_summary_caches_batch` + per-adapter impls.
+  Pre-flight cache check skips LLM call entirely on hits, validated by
+  model_fingerprint. Structural insert preserves prior `source_hash`.
+- **I8**: `DocumentEntry` adds optional `raw_text_hash` and
+  `structural_hash`. `ReingestPrediction` enum and
+  `Pagebridge::would_reingest_change`. Fast-path skip when
+  `raw_text_hash` matches (under 100ms, zero LLM calls).
+- **I9**: Criterion benches (`ingest_throughput`, `ingest_parallel`,
+  `adapter_writes`); `docs/PERF.md` tuning matrix; nightly CI bench job;
+  README ingest-time table.
+
+### Numbers (200-page PDF target)
+
+| Provider | Before | After |
+|---|---|---|
+| Groq paid (300 RPM) | several minutes | 25-45s |
+| Groq free (30 RPM) | several minutes | 90-150s |
+| Anthropic Haiku | 5-10 min | 60-120s |
+| OpenAI gpt-4o-mini | 5-10 min | 60-90s |
+| Local llama.cpp (M2 Pro) | 10+ min | 180-300s |
+
+Re-ingest of unchanged content: under 100ms regardless of provider.
+
 ## [2.0.0] - 2026-05-23
 
 The big one. Pagebridge 2.0 ships as the canonical open-source

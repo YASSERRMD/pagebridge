@@ -1,0 +1,40 @@
+name: bench
+
+# Nightly performance regression gate. Runs the ingest/adapter criterion
+# benches and uploads the criterion HTML report as an artifact. A future
+# enhancement can compare timings against a tracked baseline and fail
+# the job on 15%+ regressions.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"  # 06:00 UTC daily
+  workflow_dispatch:
+
+jobs:
+  ingest-benches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: bench-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+      - name: Run ingest_parallel bench
+        run: cargo bench -p pagebridge-core --bench ingest_parallel -- --output-format bencher
+      - name: Run ingest_throughput bench
+        run: cargo bench -p pagebridge-core --bench ingest_throughput -- --output-format bencher
+      - name: Run adapter_writes bench
+        run: cargo bench -p pagebridge-core --bench adapter_writes -- --output-format bencher
+      - name: Upload criterion reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: criterion-reports
+          path: target/criterion
+          if-no-files-found: warn
