@@ -37,6 +37,10 @@ async-trait = { workspace = true }
 name = "ingest_parallel"
 harness = false
 
+[[bench]]
+name = "ingest_throughput"
+harness = false
+
 [features]
 default = []
 test-mock = []
