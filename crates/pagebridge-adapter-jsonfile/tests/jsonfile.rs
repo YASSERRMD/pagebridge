@@ -27,6 +27,8 @@ fn root_rec(doc: &DocId) -> NodeRecord {
         created_at: 0,
         updated_at: 0,
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     }
 }
 
@@ -50,6 +52,8 @@ fn leaf_rec(doc: &DocId, i: u32, title: &str, kw: &[&str]) -> NodeRecord {
         created_at: 0,
         updated_at: 0,
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     }
 }
 
@@ -82,6 +86,8 @@ async fn roundtrip_and_persistence() {
                 created_at: 0,
                 updated_at: 0,
                 source_hash: [0; 32],
+                canonical_section: None,
+                section_aliases: vec![],
             })
             .await
             .unwrap();

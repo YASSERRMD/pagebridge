@@ -42,6 +42,8 @@ fn make_root(doc: &DocId) -> NodeRecord {
         created_at: 0,
         updated_at: 0,
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     }
 }
 
@@ -65,6 +67,8 @@ fn make_section(doc: &DocId, sec: u32, title: &str) -> NodeRecord {
         created_at: 0,
         updated_at: 0,
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     }
 }
 
@@ -89,6 +93,8 @@ fn make_leaf(doc: &DocId, sec: u32, leaf: u32, title: &str, kw: &[&str]) -> Node
         created_at: 0,
         updated_at: 0,
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     }
 }
 

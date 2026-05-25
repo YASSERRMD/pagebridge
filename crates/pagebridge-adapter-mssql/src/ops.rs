@@ -108,6 +108,8 @@ fn row_to_node(row: &Row) -> Result<NodeRecord> {
         created_at,
         updated_at,
         source_hash: hash,
+        canonical_section: None,
+        section_aliases: vec![],
     })
 }
 
