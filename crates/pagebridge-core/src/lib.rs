@@ -48,9 +48,9 @@ pub use record::{NodeLevel, NodeRecord, NodeSummary};
 pub use replication::{InvalidationEvent, InvalidationKind, ReplicationConfig, ReplicationRole};
 pub use types::{
     AdapterStats, Answer, AnswerChunk, Citation, DiffMode, DocumentEntry, DocumentHandle,
-    DocumentIngestHandle, IngestParams, Navigation, NavigationConfig, PagebridgeStats, QueryTrace,
-    ReingestPrediction, SearchHit, SourceKind, SummaryCacheEntry, TraceStep, TraceStorageMode,
-    UpdateParams, UpdateReport,
+    DocumentIngestHandle, DocumentType, IngestParams, Navigation, NavigationConfig,
+    PagebridgeStats, QueryTrace, ReingestPrediction, SearchHit, SourceKind, SummaryCacheEntry,
+    TraceStep, TraceStorageMode, UpdateParams, UpdateReport,
 };
 pub use workspace::WorkspaceId;
 pub use workspace_handle::WorkspaceHandle;

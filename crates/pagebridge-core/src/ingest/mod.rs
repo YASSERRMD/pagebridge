@@ -219,6 +219,7 @@ pub async fn ingest_with_progress(
             byte_count: built.byte_count,
             raw_text_hash: Some(raw_hash),
             structural_hash: Some(structural),
+            document_type: None,
         })
         .await?;
     if let Some(p) = &progress {
