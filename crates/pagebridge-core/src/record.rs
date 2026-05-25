@@ -39,6 +39,17 @@ pub struct NodeRecord {
     pub created_at: i64,
     pub updated_at: i64,
     pub source_hash: [u8; 32],
+    /// Phase J3: canonical section name resolved by the document-type schema
+    /// (e.g. `"experience"` for a resume node whose heading was "Work History").
+    /// `None` when the document type is unknown, the classifier is disabled,
+    /// or the heading does not match any alias in the schema.
+    #[serde(default)]
+    pub canonical_section: Option<String>,
+    /// Phase J3: the normalized alias list from the matched `SectionSchema`.
+    /// Populated together with `canonical_section`; empty when no match.
+    /// Used by query expansion and search boosting (Phase J6).
+    #[serde(default)]
+    pub section_aliases: Vec<String>,
 }
 
 impl NodeRecord {
