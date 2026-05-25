@@ -89,7 +89,7 @@ impl LlmProvider for ScriptedLlm {
     fn name(&self) -> &'static str {
         "scripted-eval"
     }
-    fn model(&self) -> &str {
+    fn model(&self) -> &'static str {
         "eval-1"
     }
     async fn complete(&self, _req: CompletionRequest) -> Result<CompletionResponse> {
@@ -190,7 +190,7 @@ impl LlmProvider for NullLlm {
     fn name(&self) -> &'static str {
         "null"
     }
-    fn model(&self) -> &str {
+    fn model(&self) -> &'static str {
         "null-1"
     }
     async fn complete(&self, _req: CompletionRequest) -> Result<CompletionResponse> {
