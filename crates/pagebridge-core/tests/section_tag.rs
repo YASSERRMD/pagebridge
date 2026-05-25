@@ -224,6 +224,7 @@ async fn section_tags_persisted_after_ingest_full() {
             enabled: true,
             min_confidence: 0.5,
             sample_chars: 4000,
+            vision_peek: false,
         },
         None,
     )
@@ -241,5 +242,8 @@ async fn section_tags_persisted_after_ingest_full() {
 
     // At least one section whose heading matches a resume schema alias must be tagged.
     let has_tagged = sections.iter().any(|n| n.canonical_section.is_some());
-    assert!(has_tagged, "at least one section must carry a canonical_section tag");
+    assert!(
+        has_tagged,
+        "at least one section must carry a canonical_section tag"
+    );
 }

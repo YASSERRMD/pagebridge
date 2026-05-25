@@ -152,6 +152,7 @@ async fn classifier_happy_path_persists_resume_verdict() {
             enabled: true,
             min_confidence: 0.5,
             sample_chars: 4000,
+            vision_peek: false,
         },
     )
     .await;
@@ -178,6 +179,7 @@ async fn classifier_low_confidence_collapses_to_generic() {
             enabled: true,
             min_confidence: 0.5,
             sample_chars: 4000,
+            vision_peek: false,
         },
     )
     .await;
@@ -196,6 +198,7 @@ async fn classifier_provider_error_does_not_abort_ingest() {
             enabled: true,
             min_confidence: 0.5,
             sample_chars: 4000,
+            vision_peek: false,
         },
     )
     .await;

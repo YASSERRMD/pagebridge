@@ -8,7 +8,8 @@
 #![allow(
     clippy::missing_const_for_fn,
     clippy::needless_pass_by_value,
-    clippy::module_name_repetitions
+    clippy::module_name_repetitions,
+    clippy::cast_possible_truncation
 )]
 
 use std::sync::Arc;
@@ -118,7 +119,7 @@ async fn find_nodes_by_canonical_returns_leaves_for_matching_section() {
         doc_id: doc_id.clone(),
         title: "My CV".into(),
         source_kind: "plain".into(),
-        ingested_at: now_ms() as i64,
+        ingested_at: now_ms(),
         root_node_id: root_id.clone(),
         leaf_count: 1,
         byte_count: 0,

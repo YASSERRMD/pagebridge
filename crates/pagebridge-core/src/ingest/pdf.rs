@@ -2,13 +2,37 @@
 //!
 //! Extracts text, treats each form-feed-separated chunk as a page, and chunks
 //! each page into leaves the same way as plain text.
+//!
+//! Phase J9 adds an optional `try_extract_page_image` helper. When a
+//! rasterization library is available (e.g. pdfium-render), replace the stub
+//! body with real rendering code. The rest of the pipeline never depends on
+//! the function returning `Some`, so the stub is safe forever.
 
 use crate::error::{PagebridgeError, Result};
 use crate::id::{DocId, NodeId};
 use crate::ingest::{make_leaf, now_ms};
+use crate::llm::VisionImage;
 use crate::record::{NodeLevel, NodeRecord};
 
 const SENTENCES_PER_LEAF: usize = 10;
+
+/// Phase J9: attempt to rasterize the first page of a PDF to a PNG image.
+///
+/// This is a **stub** implementation that always returns `None`.  When a
+/// production rasterizer (e.g. `pdfium-render`) is integrated, replace the
+/// body with the actual rendering logic.  The surrounding pipeline treats
+/// `None` as "no image available" and falls back to text-only classification,
+/// so the stub is safe in production at any time.
+///
+/// The expected return value is a [`VisionImage`] with:
+/// - `bytes`: raw PNG bytes of the first page at a moderate resolution
+///   (e.g. 150 DPI, capped at ~1024 px wide).
+/// - `media_type`: `"image/png"`.
+#[must_use]
+pub fn try_extract_page_image(_bytes: &[u8]) -> Option<VisionImage> {
+    // Stub: real rasterizer goes here.
+    None
+}
 
 /// Parse a PDF byte buffer into a tree.
 pub fn parse_bytes(doc_id: &DocId, title: &str, bytes: &[u8]) -> Result<Vec<NodeRecord>> {
@@ -132,4 +156,16 @@ fn split_sentences(text: &str) -> Vec<(usize, usize, &str)> {
 
 fn preview(s: &str, max: usize) -> String {
     s.chars().take(max).collect::<String>().trim().to_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn try_extract_page_image_stub_returns_none() {
+        // The stub must return None for any input until a real rasterizer is wired.
+        assert!(try_extract_page_image(b"").is_none());
+        assert!(try_extract_page_image(b"%PDF-1.4 fake").is_none());
+    }
 }

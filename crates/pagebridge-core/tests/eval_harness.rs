@@ -89,7 +89,7 @@ impl LlmProvider for ScriptedLlm {
     fn name(&self) -> &'static str {
         "scripted-eval"
     }
-    fn model(&self) -> &str {
+    fn model(&self) -> &'static str {
         "eval-1"
     }
     async fn complete(&self, _req: CompletionRequest) -> Result<CompletionResponse> {
@@ -148,6 +148,7 @@ async fn ingest_doc(text: &str, title: &str, doc_type_str: &str) -> Arc<MemoryAd
             enabled: true,
             min_confidence: 0.5,
             sample_chars: 4000,
+            vision_peek: false,
         },
         None,
     )
@@ -189,7 +190,7 @@ impl LlmProvider for NullLlm {
     fn name(&self) -> &'static str {
         "null"
     }
-    fn model(&self) -> &str {
+    fn model(&self) -> &'static str {
         "null-1"
     }
     async fn complete(&self, _req: CompletionRequest) -> Result<CompletionResponse> {
