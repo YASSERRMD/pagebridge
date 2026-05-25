@@ -93,6 +93,42 @@ pub trait StorageAdapter: Send + Sync + 'static {
             .find(|d| &d.doc_id == doc_id))
     }
 
+    /// Find all section-level nodes in a document whose `canonical_section`
+    /// matches `canonical` (case-insensitive), then return their leaf descendants
+    /// as full [`NodeRecord`]s.
+    ///
+    /// Phase J7 uses this for section-first navigation: when the query intent
+    /// identifies a canonical section the engine jumps straight to that section's
+    /// leaves rather than running the full LLM beam search.
+    ///
+    /// The default implementation scans the document root's children for matching
+    /// section nodes and then calls [`leaves_under`] + [`get_nodes`] on each.
+    /// Production adapters with indexed `canonical_section` columns should override
+    /// this for a direct indexed lookup.
+    async fn find_nodes_by_canonical(
+        &self,
+        doc_id: &DocId,
+        canonical: &str,
+    ) -> Result<Vec<NodeRecord>> {
+        let root = NodeId::root(doc_id);
+        let children = self.children_records(&root).await?;
+        let canonical_lower = canonical.to_lowercase();
+
+        let mut leaves: Vec<NodeRecord> = Vec::new();
+        for child in children {
+            let matches = child
+                .canonical_section
+                .as_deref()
+                .is_some_and(|s| s.to_lowercase() == canonical_lower);
+            if matches {
+                let leaf_ids = self.leaves_under(&child.node_id).await?;
+                let records = self.get_nodes(&leaf_ids).await?;
+                leaves.extend(records.into_iter().filter(|r| r.is_leaf));
+            }
+        }
+        Ok(leaves)
+    }
+
     /// Persist (or update) a document entry.
     async fn upsert_document(&self, doc: &DocumentEntry) -> Result<()>;
 
