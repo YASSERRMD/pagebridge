@@ -34,6 +34,7 @@ pub use ingest::{
     BatchWriterConfig, ClassifyConfig, IngestStage, ProgressSnapshot, ProgressTracker, SummaryTask,
     SummaryWorkerConfig, WriterStats,
 };
+pub use search::QueryIntentConfig;
 
 pub use adapter::StorageAdapter;
 pub use error::{PagebridgeError, Result};
