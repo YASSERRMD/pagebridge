@@ -20,7 +20,7 @@ use pagebridge_core::adapter::StorageAdapter;
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::id::{DocId, NodeId};
 use pagebridge_core::record::{NodeLevel, NodeRecord, NodeSummary};
-use pagebridge_core::types::{AdapterStats, DocumentEntry, SearchHit, SummaryCacheEntry};
+use pagebridge_core::types::{AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry};
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePool, SqlitePoolOptions};
 use sqlx::Row;
 
@@ -66,6 +66,21 @@ fn err<E: std::fmt::Display>(ctx: &str, e: E) -> PagebridgeError {
     PagebridgeError::Adapter {
         adapter: "sqlite".into(),
         message: format!("{ctx}: {e}"),
+    }
+}
+
+/// Run an ALTER TABLE ... ADD COLUMN statement, silently ignoring
+/// "duplicate column name" errors that occur when migrating an existing DB.
+async fn add_column_if_missing(pool: &SqlitePool, stmt: &str) -> Result<()> {
+    match sqlx::query(stmt).execute(pool).await {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            if e.to_string().contains("duplicate column name") {
+                Ok(())
+            } else {
+                Err(err("migrate add column", e))
+            }
+        }
     }
 }
 
@@ -121,6 +136,12 @@ fn row_to_node(row: sqlx::sqlite::SqliteRow) -> Result<NodeRecord> {
     let source_hash_blob: Vec<u8> = row
         .try_get("source_hash")
         .map_err(|e| err("col source_hash", e))?;
+    let canonical_section: Option<String> = row
+        .try_get("canonical_section")
+        .map_err(|e| err("col canonical_section", e))?;
+    let section_aliases_json: String = row
+        .try_get("section_aliases")
+        .map_err(|e| err("col section_aliases", e))?;
     let mut hash = [0u8; 32];
     let len = source_hash_blob.len().min(32);
     hash[..len].copy_from_slice(&source_hash_blob[..len]);
@@ -128,6 +149,8 @@ fn row_to_node(row: sqlx::sqlite::SqliteRow) -> Result<NodeRecord> {
         serde_json::from_str(&child_ids).map_err(|e| err("decode child_ids", e))?;
     let keywords: Vec<String> =
         serde_json::from_str(&keywords).map_err(|e| err("decode keywords", e))?;
+    let section_aliases: Vec<String> =
+        serde_json::from_str(&section_aliases_json).map_err(|e| err("decode section_aliases", e))?;
     let mut child_node_ids = Vec::with_capacity(child_ids.len());
     for c in child_ids {
         child_node_ids.push(NodeId::new(c)?);
@@ -152,8 +175,8 @@ fn row_to_node(row: sqlx::sqlite::SqliteRow) -> Result<NodeRecord> {
         created_at,
         updated_at,
         source_hash: hash,
-        canonical_section: None,
-        section_aliases: vec![],
+        canonical_section,
+        section_aliases,
     })
 }
 
@@ -180,10 +203,13 @@ impl StorageAdapter for SqliteAdapter {
                 is_leaf INTEGER NOT NULL,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL,
-                source_hash BLOB NOT NULL
+                source_hash BLOB NOT NULL,
+                canonical_section TEXT,
+                section_aliases TEXT NOT NULL DEFAULT '[]'
             )",
             "CREATE INDEX IF NOT EXISTS idx_nodes_doc ON pagebridge_nodes(doc_id)",
             "CREATE INDEX IF NOT EXISTS idx_nodes_parent ON pagebridge_nodes(parent_id)",
+            "CREATE INDEX IF NOT EXISTS idx_nodes_canonical ON pagebridge_nodes(doc_id, canonical_section)",
             "CREATE VIRTUAL TABLE IF NOT EXISTS pagebridge_fts USING fts5(
                 node_id UNINDEXED, doc_id UNINDEXED, title, routing_summary, summary, keywords
             )",
@@ -194,7 +220,10 @@ impl StorageAdapter for SqliteAdapter {
                 ingested_at INTEGER NOT NULL,
                 root_node_id TEXT NOT NULL,
                 leaf_count INTEGER NOT NULL,
-                byte_count INTEGER NOT NULL
+                byte_count INTEGER NOT NULL,
+                raw_text_hash BLOB,
+                structural_hash BLOB,
+                document_type TEXT
             )",
             "CREATE TABLE IF NOT EXISTS pagebridge_raw (
                 doc_id TEXT NOT NULL,
@@ -214,6 +243,22 @@ impl StorageAdapter for SqliteAdapter {
                 .await
                 .map_err(|e| err("migrate", e))?;
         }
+        // Incremental migrations for existing databases that predate these columns.
+        let node_alters = [
+            "ALTER TABLE pagebridge_nodes ADD COLUMN canonical_section TEXT",
+            "ALTER TABLE pagebridge_nodes ADD COLUMN section_aliases TEXT NOT NULL DEFAULT '[]'",
+        ];
+        for s in node_alters {
+            add_column_if_missing(&self.pool, s).await?;
+        }
+        let doc_alters = [
+            "ALTER TABLE pagebridge_docs ADD COLUMN raw_text_hash BLOB",
+            "ALTER TABLE pagebridge_docs ADD COLUMN structural_hash BLOB",
+            "ALTER TABLE pagebridge_docs ADD COLUMN document_type TEXT",
+        ];
+        for s in doc_alters {
+            add_column_if_missing(&self.pool, s).await?;
+        }
         Ok(())
     }
 
@@ -228,12 +273,14 @@ impl StorageAdapter for SqliteAdapter {
         let child_ids =
             serde_json::to_string(&child_ids_json).map_err(|e| err("encode kids", e))?;
         let keywords = serde_json::to_string(&node.keywords).map_err(|e| err("encode kw", e))?;
+        let section_aliases =
+            serde_json::to_string(&node.section_aliases).map_err(|e| err("encode aliases", e))?;
         sqlx::query(
             "INSERT INTO pagebridge_nodes (
                 node_id, doc_id, parent_id, title, level, routing_summary, summary, child_ids,
                 span_start, span_end, page_start, page_end, keywords, is_leaf, created_at,
-                updated_at, source_hash
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                updated_at, source_hash, canonical_section, section_aliases
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(node_id) DO UPDATE SET
                 doc_id=excluded.doc_id, parent_id=excluded.parent_id, title=excluded.title,
                 level=excluded.level, routing_summary=excluded.routing_summary,
@@ -242,7 +289,9 @@ impl StorageAdapter for SqliteAdapter {
                 page_start=excluded.page_start, page_end=excluded.page_end,
                 keywords=excluded.keywords, is_leaf=excluded.is_leaf,
                 created_at=excluded.created_at, updated_at=excluded.updated_at,
-                source_hash=excluded.source_hash",
+                source_hash=excluded.source_hash,
+                canonical_section=excluded.canonical_section,
+                section_aliases=excluded.section_aliases",
         )
         .bind(node.node_id.as_str())
         .bind(node.doc_id.as_str())
@@ -261,6 +310,8 @@ impl StorageAdapter for SqliteAdapter {
         .bind(node.created_at)
         .bind(node.updated_at)
         .bind(&node.source_hash[..])
+        .bind(node.canonical_section.as_deref())
+        .bind(section_aliases)
         .execute(&mut *tx)
         .await
         .map_err(|e| err("upsert node", e))?;
@@ -308,12 +359,14 @@ impl StorageAdapter for SqliteAdapter {
                 serde_json::to_string(&child_ids_json).map_err(|e| err("encode kids", e))?;
             let keywords =
                 serde_json::to_string(&node.keywords).map_err(|e| err("encode kw", e))?;
+            let section_aliases =
+                serde_json::to_string(&node.section_aliases).map_err(|e| err("encode aliases", e))?;
             sqlx::query(
                 "INSERT INTO pagebridge_nodes (
                     node_id, doc_id, parent_id, title, level, routing_summary, summary, child_ids,
                     span_start, span_end, page_start, page_end, keywords, is_leaf, created_at,
-                    updated_at, source_hash
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    updated_at, source_hash, canonical_section, section_aliases
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(node_id) DO UPDATE SET
                     doc_id=excluded.doc_id, parent_id=excluded.parent_id, title=excluded.title,
                     level=excluded.level, routing_summary=excluded.routing_summary,
@@ -322,7 +375,9 @@ impl StorageAdapter for SqliteAdapter {
                     page_start=excluded.page_start, page_end=excluded.page_end,
                     keywords=excluded.keywords, is_leaf=excluded.is_leaf,
                     created_at=excluded.created_at, updated_at=excluded.updated_at,
-                    source_hash=excluded.source_hash",
+                    source_hash=excluded.source_hash,
+                    canonical_section=excluded.canonical_section,
+                    section_aliases=excluded.section_aliases",
             )
             .bind(node.node_id.as_str())
             .bind(node.doc_id.as_str())
@@ -341,6 +396,8 @@ impl StorageAdapter for SqliteAdapter {
             .bind(node.created_at)
             .bind(node.updated_at)
             .bind(&node.source_hash[..])
+            .bind(node.canonical_section.as_deref())
+            .bind(section_aliases)
             .execute(&mut *tx)
             .await
             .map_err(|e| err("batch upsert node", e))?;
@@ -508,6 +565,33 @@ impl StorageAdapter for SqliteAdapter {
             let root_node_id: String = row.try_get("root_node_id").map_err(|e| err("col", e))?;
             let leaf_count: i64 = row.try_get("leaf_count").map_err(|e| err("col", e))?;
             let byte_count: i64 = row.try_get("byte_count").map_err(|e| err("col", e))?;
+            let raw_text_hash_blob: Option<Vec<u8>> =
+                row.try_get("raw_text_hash").map_err(|e| err("col", e))?;
+            let structural_hash_blob: Option<Vec<u8>> =
+                row.try_get("structural_hash").map_err(|e| err("col", e))?;
+            let document_type_str: Option<String> =
+                row.try_get("document_type").map_err(|e| err("col", e))?;
+            let raw_text_hash = raw_text_hash_blob.and_then(|b| {
+                if b.len() == 32 {
+                    let mut arr = [0u8; 32];
+                    arr.copy_from_slice(&b);
+                    Some(arr)
+                } else {
+                    None
+                }
+            });
+            let structural_hash = structural_hash_blob.and_then(|b| {
+                if b.len() == 32 {
+                    let mut arr = [0u8; 32];
+                    arr.copy_from_slice(&b);
+                    Some(arr)
+                } else {
+                    None
+                }
+            });
+            let document_type = document_type_str
+                .as_deref()
+                .and_then(DocumentType::parse_tag);
             out.push(DocumentEntry {
                 doc_id: DocId::new(doc_id)?,
                 title,
@@ -516,9 +600,9 @@ impl StorageAdapter for SqliteAdapter {
                 root_node_id: NodeId::new(root_node_id)?,
                 leaf_count: leaf_count as u32,
                 byte_count: byte_count as u64,
-                raw_text_hash: None,
-                structural_hash: None,
-                document_type: None,
+                raw_text_hash,
+                structural_hash,
+                document_type,
             });
         }
         Ok(out)
@@ -527,12 +611,16 @@ impl StorageAdapter for SqliteAdapter {
     async fn upsert_document(&self, doc: &DocumentEntry) -> Result<()> {
         sqlx::query(
             "INSERT INTO pagebridge_docs
-             (doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count)
-             VALUES (?,?,?,?,?,?,?)
+             (doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count,
+              raw_text_hash, structural_hash, document_type)
+             VALUES (?,?,?,?,?,?,?,?,?,?)
              ON CONFLICT(doc_id) DO UPDATE SET
                title=excluded.title, source_kind=excluded.source_kind,
                ingested_at=excluded.ingested_at, root_node_id=excluded.root_node_id,
-               leaf_count=excluded.leaf_count, byte_count=excluded.byte_count",
+               leaf_count=excluded.leaf_count, byte_count=excluded.byte_count,
+               raw_text_hash=excluded.raw_text_hash,
+               structural_hash=excluded.structural_hash,
+               document_type=excluded.document_type",
         )
         .bind(doc.doc_id.as_str())
         .bind(&doc.title)
@@ -541,10 +629,114 @@ impl StorageAdapter for SqliteAdapter {
         .bind(doc.root_node_id.as_str())
         .bind(i64::from(doc.leaf_count))
         .bind(doc.byte_count as i64)
+        .bind(doc.raw_text_hash.as_ref().map(|h| &h[..]))
+        .bind(doc.structural_hash.as_ref().map(|h| &h[..]))
+        .bind(doc.document_type.map(DocumentType::as_str))
         .execute(&self.pool)
         .await
         .map_err(|e| err("upsert_document", e))?;
         Ok(())
+    }
+
+    async fn get_document_entry(
+        &self,
+        doc_id: &DocId,
+    ) -> Result<Option<DocumentEntry>> {
+        let row = sqlx::query("SELECT * FROM pagebridge_docs WHERE doc_id = ?")
+            .bind(doc_id.as_str())
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| err("get_document_entry", e))?;
+        let Some(row) = row else { return Ok(None) };
+        let title: String = row.try_get("title").map_err(|e| err("col", e))?;
+        let source_kind: String = row.try_get("source_kind").map_err(|e| err("col", e))?;
+        let ingested_at: i64 = row.try_get("ingested_at").map_err(|e| err("col", e))?;
+        let root_node_id: String = row.try_get("root_node_id").map_err(|e| err("col", e))?;
+        let leaf_count: i64 = row.try_get("leaf_count").map_err(|e| err("col", e))?;
+        let byte_count: i64 = row.try_get("byte_count").map_err(|e| err("col", e))?;
+        let raw_text_hash_blob: Option<Vec<u8>> =
+            row.try_get("raw_text_hash").map_err(|e| err("col", e))?;
+        let structural_hash_blob: Option<Vec<u8>> =
+            row.try_get("structural_hash").map_err(|e| err("col", e))?;
+        let document_type_str: Option<String> =
+            row.try_get("document_type").map_err(|e| err("col", e))?;
+        let raw_text_hash = raw_text_hash_blob.and_then(|b| {
+            if b.len() == 32 {
+                let mut arr = [0u8; 32];
+                arr.copy_from_slice(&b);
+                Some(arr)
+            } else {
+                None
+            }
+        });
+        let structural_hash = structural_hash_blob.and_then(|b| {
+            if b.len() == 32 {
+                let mut arr = [0u8; 32];
+                arr.copy_from_slice(&b);
+                Some(arr)
+            } else {
+                None
+            }
+        });
+        Ok(Some(DocumentEntry {
+            doc_id: doc_id.clone(),
+            title,
+            source_kind,
+            ingested_at,
+            root_node_id: NodeId::new(root_node_id)?,
+            leaf_count: leaf_count as u32,
+            byte_count: byte_count as u64,
+            raw_text_hash,
+            structural_hash,
+            document_type: document_type_str
+                .as_deref()
+                .and_then(DocumentType::parse_tag),
+        }))
+    }
+
+    async fn find_nodes_by_canonical(
+        &self,
+        doc_id: &DocId,
+        canonical: &str,
+    ) -> Result<Vec<NodeRecord>> {
+        // Step 1: find section node IDs whose canonical_section matches (case-insensitive).
+        let canonical_lower = canonical.to_lowercase();
+        let rows = sqlx::query(
+            "SELECT node_id FROM pagebridge_nodes
+             WHERE doc_id = ? AND LOWER(canonical_section) = ?",
+        )
+        .bind(doc_id.as_str())
+        .bind(&canonical_lower)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| err("find canonical sections", e))?;
+
+        if rows.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Step 2: for each matching section, collect all leaf descendants.
+        let mut out = Vec::new();
+        for row in rows {
+            let sec_id_str: String = row.try_get("node_id").map_err(|e| err("col", e))?;
+            let prefix = format!("{sec_id_str}/%");
+            let leaf_rows = sqlx::query(
+                "SELECT * FROM pagebridge_nodes
+                 WHERE doc_id = ? AND is_leaf = 1
+                   AND (node_id = ? OR node_id LIKE ?)
+                 ORDER BY node_id",
+            )
+            .bind(doc_id.as_str())
+            .bind(&sec_id_str)
+            .bind(&prefix)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| err("find canonical leaves", e))?;
+            for leaf_row in leaf_rows {
+                out.push(row_to_node(leaf_row)?);
+            }
+        }
+        Ok(out)
     }
 
     async fn bm25_search(&self, query: &str, limit: usize) -> Result<Vec<SearchHit>> {
