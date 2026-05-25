@@ -45,12 +45,14 @@ pub mod plain;
 pub mod progress;
 pub mod scheduler;
 pub mod tree;
+pub mod typed_parser;
 pub mod worker;
 
 pub use batch_writer::{BatchWriterConfig, WriterStats};
 pub use classify::{classify_document, ClassifyConfig};
 pub use progress::{IngestStage, ProgressSnapshot, ProgressTracker};
 pub use scheduler::DispatchScheduler;
+pub use typed_parser::parse_typed;
 pub use worker::{SummaryTask, SummaryWorkerConfig};
 
 use std::collections::BTreeMap;
@@ -75,6 +77,16 @@ use crate::types::{
 /// Build a tree from raw bytes per the given source kind. Returns
 /// `(doc_id, leaves_count, byte_count, raw_text, nodes)`.
 pub fn build_structural(params: &IngestParams) -> Result<BuildResult> {
+    build_structural_typed(params, None)
+}
+
+/// Type-aware variant of [`build_structural`]. When `doc_type` is `Some` the
+/// Phase J4 dispatcher is used; it applies schema-guided heading detection for
+/// plain-text inputs and falls back to the generic parser for Markdown and PDF.
+pub fn build_structural_typed(
+    params: &IngestParams,
+    doc_type: Option<DocumentType>,
+) -> Result<BuildResult> {
     let doc_id = params
         .doc_id
         .clone()
@@ -83,11 +95,14 @@ pub fn build_structural(params: &IngestParams) -> Result<BuildResult> {
         source_kind: format!("{:?}", params.source_kind).to_lowercase(),
         message: format!("non-utf8 input: {e}"),
     })?;
-    let nodes = match params.source_kind {
-        SourceKind::Markdown => markdown::parse(&doc_id, &params.title, raw_text)?,
-        SourceKind::Plain => plain::parse(&doc_id, &params.title, raw_text)?,
-        SourceKind::Pdf => pdf::parse_bytes(&doc_id, &params.title, &params.raw_text)?,
-    };
+    let nodes = parse_typed(
+        &doc_id,
+        &params.title,
+        doc_type,
+        params.source_kind,
+        raw_text,
+        &params.raw_text,
+    )?;
     let leaves = nodes.iter().filter(|n| n.is_leaf).count() as u32;
     Ok(BuildResult {
         doc_id,
@@ -192,7 +207,11 @@ pub async fn ingest_full(
         p.set_stage(IngestStage::Parsing);
     }
     let _ = (&llm, &prompts, &worker_config); // touched again below
-    let built = build_structural(&params)?;
+
+    // Parse the document using the generic source-kind parser to get the
+    // doc_id for the fast-path check. If J4 type-aware re-parsing is later
+    // needed, we pass the already-resolved doc_id so both parses agree.
+    let initial = build_structural(&params)?;
 
     // Fast path: if a document with this doc_id already exists and the new
     // raw text hashes to the same value, skip parsing+structural+summary
@@ -200,23 +219,23 @@ pub async fn ingest_full(
     // pays for an extra LLM call.
     let raw_hash = source_hash(&params.raw_text);
     if let Ok(existing) = storage.list_documents().await {
-        if let Some(prev) = existing.into_iter().find(|d| d.doc_id == built.doc_id) {
+        if let Some(prev) = existing.into_iter().find(|d| d.doc_id == initial.doc_id) {
             if prev.raw_text_hash == Some(raw_hash) {
                 if let Some(p) = &progress {
-                    p.note_total_nodes(built.leaf_count);
+                    p.note_total_nodes(initial.leaf_count);
                     p.note_structural_done();
                     p.set_stage(IngestStage::Done);
                 }
                 let handle = DocumentHandle {
-                    doc_id: built.doc_id.clone(),
-                    root_node_id: NodeId::root(&built.doc_id),
-                    leaf_count: built.leaf_count,
-                    byte_count: built.byte_count,
+                    doc_id: initial.doc_id.clone(),
+                    root_node_id: NodeId::root(&initial.doc_id),
+                    leaf_count: initial.leaf_count,
+                    byte_count: initial.byte_count,
                     structural_ingest_ms: 0,
                 };
                 let join = tokio::spawn(async move { Ok(()) });
                 tracing::debug!(
-                    doc_id = %built.doc_id,
+                    doc_id = %initial.doc_id,
                     "skip_on_equivalent fast path hit (raw_text_hash match)"
                 );
                 return Ok((handle, join));
@@ -249,6 +268,35 @@ pub async fn ingest_full(
     } else {
         None
     };
+
+    // Phase J4: type-aware re-parse for Plain text when a specific document
+    // type was resolved. We pass the doc_id already computed by `initial`
+    // so both parses produce the same node_id namespace. Re-parsing is skipped
+    // for Markdown and PDF (they already produce well-structured trees) and
+    // when doc_type is None or Generic (no schema guidance available).
+    let built = if doc_type.is_some_and(|dt| dt != DocumentType::Generic)
+        && params.source_kind == SourceKind::Plain
+    {
+        let mut typed_params = params.clone();
+        typed_params.doc_id = Some(initial.doc_id.clone());
+        match build_structural_typed(&typed_params, doc_type) {
+            Ok(b) => {
+                tracing::debug!(
+                    document_type = doc_type.map(DocumentType::as_str).unwrap_or("none"),
+                    leaf_count = b.leaf_count,
+                    "Phase J4 type-aware parse used"
+                );
+                b
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "Phase J4 typed parser failed; using generic parse");
+                initial
+            }
+        }
+    } else {
+        initial
+    };
+
     let root_node_id = NodeId::root(&built.doc_id);
     let doc_id = built.doc_id.clone();
     if let Some(p) = &progress {
