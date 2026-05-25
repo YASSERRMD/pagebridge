@@ -24,7 +24,7 @@
 use std::sync::Arc;
 
 use crate::error::Result;
-use crate::llm::{ChatMessage, CompletionRequest, LlmProvider};
+use crate::llm::{ChatMessage, CompletionRequest, LlmProvider, VisionImage};
 use crate::types::DocumentType;
 
 /// Tunables for the document type classifier.
@@ -41,6 +41,18 @@ pub struct ClassifyConfig {
     /// included in the classifier prompt. Capped to keep prompt costs
     /// bounded for very large documents.
     pub sample_chars: usize,
+    /// Phase J9: when `true`, pass a rasterized image of the first page to
+    /// the classifier alongside the text sample (PDF source only).
+    ///
+    /// Only fires when:
+    /// - `enabled` is also `true`,
+    /// - the source document is a PDF,
+    /// - a first-page image can be extracted, AND
+    /// - the configured LLM provider reports `supports_vision() == true`.
+    ///
+    /// Defaults to `false` so existing callers that do not set it explicitly
+    /// are unaffected.
+    pub vision_peek: bool,
 }
 
 impl Default for ClassifyConfig {
@@ -49,6 +61,7 @@ impl Default for ClassifyConfig {
             enabled: true,
             min_confidence: 0.5,
             sample_chars: 4000,
+            vision_peek: false,
         }
     }
 }
@@ -127,6 +140,11 @@ pub fn build_classify_prompt(title: &str, sample_text: &str, sample_chars: usize
 
 /// Classify a document via the configured LLM provider.
 ///
+/// `images` carries zero or more pre-rasterized page images (Phase J9).
+/// They are forwarded to the LLM only when `config.vision_peek == true`
+/// and `llm.supports_vision() == true`; otherwise they are ignored so
+/// callers can pass them unconditionally without penalty.
+///
 /// Returns `Ok((Generic, 0.0))` when the classifier is disabled or the
 /// provider returns malformed output. Returns `Err` only when the
 /// provider itself errors; callers may decide whether to propagate or
@@ -136,26 +154,33 @@ pub async fn classify_document(
     title: &str,
     sample_text: &str,
     config: ClassifyConfig,
+    images: &[VisionImage],
 ) -> Result<ClassifyOutcome> {
     if !config.enabled {
         return Ok((DocumentType::Generic, 0.0));
     }
     let prompt = build_classify_prompt(title, sample_text, config.sample_chars);
     let schema = classify_schema();
-    let resp = llm
-        .complete_json(
-            CompletionRequest {
-                system: Some(
-                    "You are a precise document classifier. Read the title and the \
-                     opening text, then pick the single best category."
-                        .into(),
-                ),
-                messages: vec![ChatMessage::user(prompt)],
-                ..CompletionRequest::default()
-            },
-            &schema,
-        )
-        .await?;
+    // Phase J9: attach images when vision_peek is enabled and the provider
+    // supports vision.  Non-vision providers silently ignore the images
+    // field, but we gate on supports_vision() to avoid sending unnecessary
+    // bytes over the wire.
+    let include_images = config.vision_peek && llm.supports_vision() && !images.is_empty();
+    let request = CompletionRequest {
+        system: Some(
+            "You are a precise document classifier. Read the title and the \
+             opening text, then pick the single best category."
+                .into(),
+        ),
+        messages: vec![ChatMessage::user(prompt)],
+        images: if include_images {
+            images.to_vec()
+        } else {
+            vec![]
+        },
+        ..CompletionRequest::default()
+    };
+    let resp = llm.complete_json(request, &schema).await?;
     Ok(parse_classify_response(&resp, config.min_confidence))
 }
 
@@ -231,5 +256,27 @@ mod tests {
         // The truncation must not produce invalid UTF-8 or panic.
         assert!(prompt.contains("FIRST"));
         assert!(prompt.is_char_boundary(prompt.len()));
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase J9: vision_peek field tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn classify_config_default_has_vision_peek_false() {
+        let cfg = ClassifyConfig::default();
+        assert!(
+            !cfg.vision_peek,
+            "vision_peek must default to false so existing callers are unaffected"
+        );
+    }
+
+    #[test]
+    fn vision_peek_true_sets_field_correctly() {
+        let cfg = ClassifyConfig {
+            vision_peek: true,
+            ..ClassifyConfig::default()
+        };
+        assert!(cfg.vision_peek);
     }
 }

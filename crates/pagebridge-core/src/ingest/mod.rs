@@ -252,11 +252,25 @@ pub async fn ingest_full(
     // re-ingests stay free.
     let doc_type = if classify.enabled {
         let sample = std::str::from_utf8(&params.raw_text).unwrap_or_default();
-        match classify::classify_document(&llm, &params.title, sample, classify).await {
+        // Phase J9: when vision_peek is enabled and the source is a PDF, try
+        // to rasterize the first page and include it as a vision image.  The
+        // function returns None on non-PDF inputs and when no rasterizer is
+        // available, so this is always a no-op for non-PDF sources.
+        let peek_image: Vec<crate::llm::VisionImage> =
+            if classify.vision_peek && params.source_kind == SourceKind::Pdf {
+                pdf::try_extract_page_image(&params.raw_text)
+                    .into_iter()
+                    .collect()
+            } else {
+                vec![]
+            };
+        match classify::classify_document(&llm, &params.title, sample, classify, &peek_image).await
+        {
             Ok((kind, confidence)) => {
                 tracing::debug!(
                     document_type = kind.as_str(),
                     confidence,
+                    vision_peek_used = !peek_image.is_empty(),
                     "Phase J1 classifier verdict"
                 );
                 Some(kind)

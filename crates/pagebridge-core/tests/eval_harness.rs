@@ -148,6 +148,7 @@ async fn ingest_doc(text: &str, title: &str, doc_type_str: &str) -> Arc<MemoryAd
             enabled: true,
             min_confidence: 0.5,
             sample_chars: 4000,
+            vision_peek: false,
         },
         None,
     )
