@@ -67,6 +67,8 @@ fn extract_node(row: &oracle::Row) -> Result<NodeRecord> {
         created_at,
         updated_at,
         source_hash: hash,
+        canonical_section: None,
+        section_aliases: vec![],
     })
 }
 

@@ -97,6 +97,8 @@ fn synthesize_renders_with_leaves() {
             created_at: 0,
             updated_at: 0,
             source_hash: [0; 32],
+            canonical_section: None,
+            section_aliases: vec![],
         }],
         ..Default::default()
     };

@@ -29,6 +29,8 @@ pub fn parse(doc_id: &DocId, title: &str, text: &str) -> Result<Vec<NodeRecord>>
         created_at: now_ms(),
         updated_at: now_ms(),
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     });
 
     let sentences = split_sentences(text);
@@ -71,6 +73,8 @@ pub fn parse(doc_id: &DocId, title: &str, text: &str) -> Result<Vec<NodeRecord>>
             created_at: now_ms(),
             updated_at: now_ms(),
             source_hash: [0; 32],
+            canonical_section: None,
+            section_aliases: vec![],
         });
         for leaf in sec_chunks.iter() {
             if leaf.is_empty() {

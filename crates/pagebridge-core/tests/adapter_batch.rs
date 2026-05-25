@@ -52,6 +52,8 @@ fn make_node(doc: &DocId, parent: &NodeId, seq: u32) -> NodeRecord {
         created_at: 0,
         updated_at: 0,
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     }
 }
 
@@ -78,6 +80,8 @@ async fn batch_upsert_inserts_every_record() {
         created_at: 0,
         updated_at: 0,
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     };
     storage.upsert_node(&root_record).await.unwrap();
 

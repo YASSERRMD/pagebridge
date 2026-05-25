@@ -89,6 +89,8 @@ fn node_record_validate_invariants() {
         created_at: 0,
         updated_at: 0,
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     };
     assert!(r.validate().is_ok());
 
@@ -133,6 +135,8 @@ fn node_record_serde_roundtrip() {
         created_at: 42,
         updated_at: 42,
         source_hash: [1; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     };
     let s = serde_json::to_string(&r).unwrap();
     let back: NodeRecord = serde_json::from_str(&s).unwrap();
