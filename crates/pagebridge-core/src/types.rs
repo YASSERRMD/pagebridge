@@ -410,6 +410,8 @@ pub struct NavigationConfig {
     pub max_leaves: u8,
     pub max_llm_calls: u8,
     pub token_budget_per_query: u32,
+    /// Phase J6: query intent classification and BM25 expansion settings.
+    pub query_intent: crate::search::QueryIntentConfig,
 }
 
 impl Default for NavigationConfig {
@@ -421,6 +423,7 @@ impl Default for NavigationConfig {
             max_leaves: 8,
             max_llm_calls: 12,
             token_budget_per_query: 32_000,
+            query_intent: crate::search::QueryIntentConfig::default(),
         }
     }
 }

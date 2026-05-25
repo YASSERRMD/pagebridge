@@ -11,9 +11,10 @@ use crate::llm::{ChatMessage, CompletionRequest, LlmProvider};
 use crate::prompts::{PromptContext, PromptLibrary};
 use crate::record::NodeRecord;
 use crate::trace::TraceBuilder;
-use crate::types::{NavigationConfig, SearchHit};
+use crate::types::{DocumentType, NavigationConfig, SearchHit};
 
 use super::candidates;
+use super::query_intent;
 
 /// Outcome of a navigation pass: the chosen leaf records.
 #[derive(Debug, Clone)]
@@ -34,7 +35,27 @@ pub async fn navigate(
     doc_filter: Option<&DocId>,
     trace: &mut TraceBuilder,
 ) -> Result<NavigationOutcome> {
-    let bm25 = candidates::select(storage, question, cfg.bm25_candidate_limit, doc_filter).await?;
+    // Phase J6: expand the query with canonical section aliases when the
+    // document type is known.  Only fires for single-document queries where
+    // the stored DocumentEntry has a non-Generic type; global queries are
+    // left unchanged.
+    let expanded_question: String = if let Some(did) = doc_filter {
+        match storage.get_document_entry(did).await? {
+            Some(entry) => match entry.document_type {
+                Some(dt) if dt != DocumentType::Generic => {
+                    query_intent::maybe_expand(question, dt, cfg.query_intent)
+                }
+                _ => question.to_owned(),
+            },
+            None => question.to_owned(),
+        }
+    } else {
+        question.to_owned()
+    };
+    let bm25_query = expanded_question.as_str();
+
+    let bm25 =
+        candidates::select(storage, bm25_query, cfg.bm25_candidate_limit, doc_filter).await?;
     let top_score = bm25.first().map_or(0.0, |h| h.score);
     trace.bm25(&bm25, top_score);
 

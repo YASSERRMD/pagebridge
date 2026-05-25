@@ -81,6 +81,18 @@ pub trait StorageAdapter: Send + Sync + 'static {
     /// List every document this adapter holds.
     async fn list_documents(&self) -> Result<Vec<DocumentEntry>>;
 
+    /// Fetch a single document entry by id. Returns `Ok(None)` if absent.
+    ///
+    /// The default implementation iterates [`list_documents`]; adapters with
+    /// indexed metadata stores should override this for O(1) lookup.
+    async fn get_document_entry(&self, doc_id: &DocId) -> Result<Option<DocumentEntry>> {
+        Ok(self
+            .list_documents()
+            .await?
+            .into_iter()
+            .find(|d| &d.doc_id == doc_id))
+    }
+
     /// Persist (or update) a document entry.
     async fn upsert_document(&self, doc: &DocumentEntry) -> Result<()>;
 
