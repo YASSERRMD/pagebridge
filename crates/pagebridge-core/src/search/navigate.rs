@@ -10,6 +10,7 @@ use crate::id::{DocId, NodeId};
 use crate::llm::{ChatMessage, CompletionRequest, LlmProvider};
 use crate::prompts::{PromptContext, PromptLibrary};
 use crate::record::NodeRecord;
+use crate::section_schema::document_schema_for;
 use crate::trace::TraceBuilder;
 use crate::types::{DocumentType, NavigationConfig, SearchHit};
 
@@ -35,24 +36,53 @@ pub async fn navigate(
     doc_filter: Option<&DocId>,
     trace: &mut TraceBuilder,
 ) -> Result<NavigationOutcome> {
-    // Phase J6: expand the query with canonical section aliases when the
-    // document type is known.  Only fires for single-document queries where
-    // the stored DocumentEntry has a non-Generic type; global queries are
-    // left unchanged.
-    let expanded_question: String = if let Some(did) = doc_filter {
-        match storage.get_document_entry(did).await? {
-            Some(entry) => match entry.document_type {
-                Some(dt) if dt != DocumentType::Generic => {
-                    query_intent::maybe_expand(question, dt, cfg.query_intent)
-                }
-                _ => question.to_owned(),
-            },
-            None => question.to_owned(),
+    // Fetch the document entry once; reused by J6 expansion and J7 fast-path.
+    let doc_entry = match doc_filter {
+        Some(did) => storage.get_document_entry(did).await?,
+        None => None,
+    };
+    let doc_type: Option<DocumentType> = doc_entry.as_ref().and_then(|e| e.document_type);
+
+    // Phase J6: expand the BM25 query with canonical section aliases when the
+    // document type is known and non-Generic.
+    let expanded_question: String = match doc_type {
+        Some(dt) if dt != DocumentType::Generic => {
+            query_intent::maybe_expand(question, dt, cfg.query_intent)
         }
-    } else {
-        question.to_owned()
+        _ => question.to_owned(),
     };
     let bm25_query = expanded_question.as_str();
+
+    // Phase J7: section-first fast path.
+    // When query intent can be classified to a specific canonical section, jump
+    // directly to that section's leaves without running BM25 or LLM navigation.
+    if let (Some(did), Some(dt)) = (doc_filter, doc_type) {
+        if dt != DocumentType::Generic && cfg.query_intent.enabled {
+            let schema = document_schema_for(dt);
+            if let Some(sec) = query_intent::classify_query_intent(question, dt, schema) {
+                let section_leaves = storage
+                    .find_nodes_by_canonical(did, sec.canonical_name)
+                    .await?;
+                if !section_leaves.is_empty() {
+                    let selected: Vec<NodeRecord> = section_leaves
+                        .into_iter()
+                        .take(cfg.max_leaves as usize)
+                        .collect();
+                    trace.leaf_selection(
+                        &selected
+                            .iter()
+                            .map(|n| n.node_id.clone())
+                            .collect::<Vec<_>>(),
+                    );
+                    return Ok(NavigationOutcome {
+                        selected_leaves: selected,
+                        bm25_candidates: vec![],
+                        considered_roots: vec![NodeId::root(did)],
+                    });
+                }
+            }
+        }
+    }
 
     let bm25 =
         candidates::select(storage, bm25_query, cfg.bm25_candidate_limit, doc_filter).await?;
