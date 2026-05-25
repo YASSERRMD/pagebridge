@@ -415,6 +415,7 @@ impl StorageAdapter for MongoAdapter {
                 byte_count: byte_count as u64,
                 raw_text_hash: None,
                 structural_hash: None,
+                document_type: None,
             });
         }
         Ok(out)

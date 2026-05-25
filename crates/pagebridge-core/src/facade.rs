@@ -24,8 +24,7 @@ use crate::audit_hook::{
 use crate::error::{PagebridgeError, Result};
 use crate::id::DocId;
 use crate::ingest::{
-    ingest_with_config as do_ingest, ingest_with_progress as do_ingest_with_progress,
-    ProgressTracker, SummaryWorkerConfig,
+    ingest_full as do_ingest_full, ClassifyConfig, ProgressTracker, SummaryWorkerConfig,
 };
 use crate::llm::LlmProvider;
 use crate::prompts::PromptLibrary;
@@ -54,6 +53,10 @@ pub struct PagebridgeOptions {
     /// Concurrency knobs for the ingest summary fan-out. Defaults to
     /// `max_concurrency = 8`. Override with [`PagebridgeOptions::with_summary_worker_config`].
     pub summary_worker: SummaryWorkerConfig,
+    /// Phase J1 document-type classifier knobs. Defaults to enabled with
+    /// a 0.5 confidence floor and a 4000 char sample window. Override
+    /// with [`PagebridgeOptions::with_classify_config`].
+    pub classify: ClassifyConfig,
 }
 
 impl PagebridgeOptions {
@@ -73,7 +76,19 @@ impl PagebridgeOptions {
             deterministic: None,
             snapshot_id: None,
             summary_worker: SummaryWorkerConfig::default(),
+            classify: ClassifyConfig::default(),
         }
+    }
+
+    /// Override the Phase J1 document-type classifier knobs.
+    ///
+    /// Pass `ClassifyConfig { enabled: false, .. }` to suppress the
+    /// per-ingest classifier LLM call, falling back to the pre-J1
+    /// "every document is `Generic`" behavior.
+    #[must_use]
+    pub fn with_classify_config(mut self, cfg: ClassifyConfig) -> Self {
+        self.classify = cfg;
+        self
     }
 
     /// Override the summary fan-out concurrency knobs. The default is
@@ -146,6 +161,7 @@ pub(crate) struct PagebridgeInner {
     pub deterministic: Option<serde_json::Value>,
     pub snapshot_id: Option<String>,
     pub summary_worker: SummaryWorkerConfig,
+    pub classify: ClassifyConfig,
 }
 
 /// The cognitive retrieval appliance. Cheap to clone via `Arc`.
@@ -176,6 +192,7 @@ impl Pagebridge {
             deterministic: opts.deterministic,
             snapshot_id: opts.snapshot_id,
             summary_worker: opts.summary_worker,
+            classify: opts.classify,
         };
         Ok(Self {
             inner: Arc::new(inner),
@@ -186,12 +203,14 @@ impl Pagebridge {
     /// completes. Summary work runs in a background task.
     pub async fn ingest_document(&self, params: IngestParams) -> Result<DocumentHandle> {
         let started = std::time::Instant::now();
-        let result = do_ingest(
+        let result = do_ingest_full(
             Arc::clone(&self.inner.storage),
             Arc::clone(&self.inner.llm),
             Arc::clone(&self.inner.prompts),
             params,
             self.inner.summary_worker,
+            self.inner.classify,
+            None,
         )
         .await;
         let latency_ms = u32::try_from(started.elapsed().as_millis()).unwrap_or(u32::MAX);
@@ -235,12 +254,13 @@ impl Pagebridge {
             .unwrap_or_else(|| crate::id::DocId::new("pending").expect("static doc id"));
         let progress = ProgressTracker::new(doc_id_hint);
         let started = std::time::Instant::now();
-        let result = do_ingest_with_progress(
+        let result = do_ingest_full(
             Arc::clone(&self.inner.storage),
             Arc::clone(&self.inner.llm),
             Arc::clone(&self.inner.prompts),
             params,
             self.inner.summary_worker,
+            self.inner.classify,
             Some(Arc::clone(&progress)),
         )
         .await;

@@ -126,6 +126,7 @@ async fn full_postgres_roundtrip() {
             byte_count: 0,
             raw_text_hash: None,
             structural_hash: None,
+            document_type: None,
         })
         .await
         .unwrap();

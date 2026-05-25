@@ -27,6 +27,79 @@ impl SourceKind {
     }
 }
 
+/// Coarse classification of a document's kind, set by the Phase J1 classifier
+/// and used by downstream parsers, summarizers, and the query planner.
+///
+/// `Generic` is the fall-back when the classifier is disabled, the LLM
+/// fails, or confidence falls below the configured floor. Higher-level
+/// pipelines treat `Generic` identically to today's pre-J1 behavior so
+/// the field is fully backwards-compatible.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DocumentType {
+    /// CV / resume / curriculum vitae.
+    Resume,
+    /// Academic paper or preprint.
+    ResearchPaper,
+    /// Contract, terms of service, policy, NDA.
+    LegalDocument,
+    /// SDK docs, runbook, user guide, reference manual.
+    TechnicalManual,
+    /// Quarterly report, market analysis, white paper.
+    BusinessReport,
+    /// Meeting minutes / notes.
+    MeetingMinutes,
+    /// A single email or email thread.
+    Email,
+    /// Long-form prose: a book or single chapter.
+    BookOrChapter,
+    /// None of the above.
+    Generic,
+}
+
+impl DocumentType {
+    /// Returns a stable lowercase tag suitable for logging and trace metadata.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Resume => "resume",
+            Self::ResearchPaper => "research_paper",
+            Self::LegalDocument => "legal_document",
+            Self::TechnicalManual => "technical_manual",
+            Self::BusinessReport => "business_report",
+            Self::MeetingMinutes => "meeting_minutes",
+            Self::Email => "email",
+            Self::BookOrChapter => "book_or_chapter",
+            Self::Generic => "generic",
+        }
+    }
+
+    /// Parse a tag (case-insensitive, snake or kebab) back into a variant.
+    /// Returns `None` for unknown tags so the caller can fall back to
+    /// `Generic` without panicking on a misbehaving model.
+    #[must_use]
+    pub fn parse_tag(s: &str) -> Option<Self> {
+        let normalized: String = s
+            .trim()
+            .to_ascii_lowercase()
+            .chars()
+            .map(|c| if c == '-' { '_' } else { c })
+            .collect();
+        Some(match normalized.as_str() {
+            "resume" | "cv" | "curriculum_vitae" => Self::Resume,
+            "research_paper" | "paper" | "academic_paper" => Self::ResearchPaper,
+            "legal_document" | "legal" | "contract" => Self::LegalDocument,
+            "technical_manual" | "manual" | "documentation" | "docs" => Self::TechnicalManual,
+            "business_report" | "report" | "white_paper" => Self::BusinessReport,
+            "meeting_minutes" | "minutes" | "meeting" => Self::MeetingMinutes,
+            "email" | "thread" => Self::Email,
+            "book_or_chapter" | "book" | "chapter" => Self::BookOrChapter,
+            "generic" | "other" | "unknown" => Self::Generic,
+            _ => return None,
+        })
+    }
+}
+
 /// Parameters for ingesting a new document.
 #[derive(Debug, Clone)]
 pub struct IngestParams {
@@ -173,6 +246,15 @@ pub struct DocumentEntry {
     /// for the document. `None` for legacy entries; populated by Phase I8.
     #[serde(default)]
     pub structural_hash: Option<[u8; 32]>,
+    /// Coarse document classification produced by the Phase J1 classifier
+    /// at ingest time. `None` for entries written by pre-J1 pagebridge or
+    /// when the classifier is disabled. Downstream parsers, summarizers,
+    /// and the query intent router branch on this value.
+    ///
+    /// `#[serde(default)]` (no `skip_serializing_if`) for bincode layout
+    /// stability across versions; the embedded adapter depends on this.
+    #[serde(default)]
+    pub document_type: Option<DocumentType>,
 }
 
 /// Prediction returned by [`crate::Pagebridge::would_reingest_change`].
