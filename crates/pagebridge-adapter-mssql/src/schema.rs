@@ -53,11 +53,18 @@ const STATEMENTS: &[&str] = &[
          is_leaf BIT NOT NULL,
          created_at BIGINT NOT NULL,
          updated_at BIGINT NOT NULL,
-         source_hash VARBINARY(32) NOT NULL
+         source_hash VARBINARY(32) NOT NULL,
+         canonical_section NVARCHAR(MAX) NULL,
+         section_aliases NVARCHAR(MAX) NOT NULL DEFAULT '[]'
        );
        CREATE INDEX idx_pb_nodes_doc ON pagebridge_nodes(doc_id);
        CREATE INDEX idx_pb_nodes_parent ON pagebridge_nodes(parent_id);
      END",
+    // Incremental migrations for databases that predate these columns.
+    "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('pagebridge_nodes') AND name = 'canonical_section')
+     ALTER TABLE pagebridge_nodes ADD canonical_section NVARCHAR(MAX) NULL",
+    "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('pagebridge_nodes') AND name = 'section_aliases')
+     ALTER TABLE pagebridge_nodes ADD section_aliases NVARCHAR(MAX) NOT NULL DEFAULT '[]'",
     "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'pagebridge_docs')
      BEGIN
        CREATE TABLE pagebridge_docs (
@@ -67,9 +74,18 @@ const STATEMENTS: &[&str] = &[
          ingested_at BIGINT NOT NULL,
          root_node_id NVARCHAR(512) NOT NULL,
          leaf_count INT NOT NULL,
-         byte_count BIGINT NOT NULL
+         byte_count BIGINT NOT NULL,
+         raw_text_hash VARBINARY(32) NULL,
+         structural_hash VARBINARY(32) NULL,
+         document_type NVARCHAR(64) NULL
        );
      END",
+    "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('pagebridge_docs') AND name = 'raw_text_hash')
+     ALTER TABLE pagebridge_docs ADD raw_text_hash VARBINARY(32) NULL",
+    "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('pagebridge_docs') AND name = 'structural_hash')
+     ALTER TABLE pagebridge_docs ADD structural_hash VARBINARY(32) NULL",
+    "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('pagebridge_docs') AND name = 'document_type')
+     ALTER TABLE pagebridge_docs ADD document_type NVARCHAR(64) NULL",
     "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'pagebridge_raw')
      BEGIN
        CREATE TABLE pagebridge_raw (

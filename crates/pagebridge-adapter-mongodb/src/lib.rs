@@ -23,7 +23,7 @@ use pagebridge_core::adapter::StorageAdapter;
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::id::{DocId, NodeId};
 use pagebridge_core::record::{NodeLevel, NodeRecord, NodeSummary};
-use pagebridge_core::types::{AdapterStats, DocumentEntry, SearchHit, SummaryCacheEntry};
+use pagebridge_core::types::{AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry};
 
 const RAW_CHUNK_LIMIT: usize = 1024 * 1024;
 
@@ -122,6 +122,16 @@ fn node_to_doc(node: &NodeRecord) -> Document {
     if let Some(p) = node.page_end {
         d.insert("page_end", i32::try_from(p).unwrap_or(i32::MAX));
     }
+    match &node.canonical_section {
+        Some(s) => { d.insert("canonical_section", s.clone()); }
+        None => { d.insert("canonical_section", Bson::Null); }
+    }
+    let aliases: Vec<Bson> = node
+        .section_aliases
+        .iter()
+        .map(|a| Bson::String(a.clone()))
+        .collect();
+    d.insert("section_aliases", aliases);
     d
 }
 
@@ -176,6 +186,16 @@ fn doc_to_node(d: Document) -> Result<NodeRecord> {
     for c in child_ids {
         child_node_ids.push(NodeId::new(c)?);
     }
+    let canonical_section: Option<String> = match d.get("canonical_section") {
+        Some(Bson::String(s)) => Some(s.clone()),
+        _ => None,
+    };
+    let section_aliases: Vec<String> = d
+        .get_array("section_aliases")
+        .unwrap_or(&vec![])
+        .iter()
+        .filter_map(|v| v.as_str().map(str::to_owned))
+        .collect();
     Ok(NodeRecord {
         node_id: NodeId::new(node_id)?,
         doc_id: DocId::new(doc_id)?,
@@ -196,8 +216,8 @@ fn doc_to_node(d: Document) -> Result<NodeRecord> {
         created_at,
         updated_at,
         source_hash: hash,
-        canonical_section: None,
-        section_aliases: vec![],
+        canonical_section,
+        section_aliases,
     })
 }
 
@@ -214,6 +234,9 @@ impl StorageAdapter for MongoAdapter {
             .create_indexes(vec![
                 IndexModel::builder().keys(doc! {"doc_id": 1}).build(),
                 IndexModel::builder().keys(doc! {"parent_id": 1}).build(),
+                IndexModel::builder()
+                    .keys(doc! {"doc_id": 1, "canonical_section": 1})
+                    .build(),
                 IndexModel::builder()
                     .keys(doc! {
                         "title": "text",
@@ -407,6 +430,12 @@ impl StorageAdapter for MongoAdapter {
                 .to_owned();
             let leaf_count = d.get_i32("leaf_count").map_err(|e| err("col", e))?;
             let byte_count = d.get_i64("byte_count").map_err(|e| err("col", e))?;
+            let raw_text_hash = bson_to_hash32(d.get("raw_text_hash"));
+            let structural_hash = bson_to_hash32(d.get("structural_hash"));
+            let document_type = match d.get("document_type") {
+                Some(Bson::String(s)) => DocumentType::parse_tag(s),
+                _ => None,
+            };
             out.push(DocumentEntry {
                 doc_id: DocId::new(doc_id)?,
                 title,
@@ -415,15 +444,21 @@ impl StorageAdapter for MongoAdapter {
                 root_node_id: NodeId::new(root_node_id)?,
                 leaf_count: leaf_count as u32,
                 byte_count: byte_count as u64,
-                raw_text_hash: None,
-                structural_hash: None,
-                document_type: None,
+                raw_text_hash,
+                structural_hash,
+                document_type,
             });
         }
         Ok(out)
     }
 
     async fn upsert_document(&self, doc: &DocumentEntry) -> Result<()> {
+        let raw_text_hash_bson = hash32_to_bson(doc.raw_text_hash.as_ref());
+        let structural_hash_bson = hash32_to_bson(doc.structural_hash.as_ref());
+        let document_type_bson = match doc.document_type {
+            Some(dt) => Bson::String(dt.as_str().to_owned()),
+            None => Bson::Null,
+        };
         let d = doc! {
             "_id": doc.doc_id.as_str(),
             "title": &doc.title,
@@ -432,6 +467,9 @@ impl StorageAdapter for MongoAdapter {
             "root_node_id": doc.root_node_id.as_str(),
             "leaf_count": doc.leaf_count as i32,
             "byte_count": doc.byte_count as i64,
+            "raw_text_hash": raw_text_hash_bson,
+            "structural_hash": structural_hash_bson,
+            "document_type": document_type_bson,
         };
         self.docs()
             .replace_one(doc! { "_id": doc.doc_id.as_str() }, d)
@@ -439,6 +477,89 @@ impl StorageAdapter for MongoAdapter {
             .await
             .map_err(|e| err("upsert_document", e))?;
         Ok(())
+    }
+
+    async fn get_document_entry(
+        &self,
+        doc_id: &DocId,
+    ) -> Result<Option<DocumentEntry>> {
+        let opt = self
+            .docs()
+            .find_one(doc! { "_id": doc_id.as_str() })
+            .await
+            .map_err(|e| err("get_document_entry", e))?;
+        let Some(d) = opt else { return Ok(None) };
+        let title = d.get_str("title").map_err(|e| err("col", e))?.to_owned();
+        let source_kind = d.get_str("source_kind").map_err(|e| err("col", e))?.to_owned();
+        let ingested_at = d.get_i64("ingested_at").map_err(|e| err("col", e))?;
+        let root_node_id = d.get_str("root_node_id").map_err(|e| err("col", e))?.to_owned();
+        let leaf_count = d.get_i32("leaf_count").map_err(|e| err("col", e))?;
+        let byte_count = d.get_i64("byte_count").map_err(|e| err("col", e))?;
+        let raw_text_hash = bson_to_hash32(d.get("raw_text_hash"));
+        let structural_hash = bson_to_hash32(d.get("structural_hash"));
+        let document_type = match d.get("document_type") {
+            Some(Bson::String(s)) => DocumentType::parse_tag(s),
+            _ => None,
+        };
+        Ok(Some(DocumentEntry {
+            doc_id: doc_id.clone(),
+            title,
+            source_kind,
+            ingested_at,
+            root_node_id: NodeId::new(root_node_id)?,
+            leaf_count: leaf_count as u32,
+            byte_count: byte_count as u64,
+            raw_text_hash,
+            structural_hash,
+            document_type,
+        }))
+    }
+
+    async fn find_nodes_by_canonical(
+        &self,
+        doc_id: &DocId,
+        canonical: &str,
+    ) -> Result<Vec<NodeRecord>> {
+        // MongoDB is case-sensitive by default; use a case-insensitive regex.
+        let pattern = format!("^{}$", regex_escape(canonical));
+        let mut cursor = self
+            .nodes()
+            .find(doc! {
+                "doc_id": doc_id.as_str(),
+                "canonical_section": { "$regex": pattern, "$options": "i" },
+            })
+            .await
+            .map_err(|e| err("find canonical sections", e))?;
+        let mut sec_ids: Vec<String> = Vec::new();
+        while let Some(d) = cursor.try_next().await.map_err(|e| err("cursor", e))? {
+            if let Ok(id) = d.get_str("node_id") {
+                sec_ids.push(id.to_owned());
+            }
+        }
+        if sec_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let mut out = Vec::new();
+        for sec_id in &sec_ids {
+            let prefix = format!("^{}", regex_escape(sec_id));
+            let mut leaf_cursor = self
+                .nodes()
+                .find(doc! {
+                    "doc_id": doc_id.as_str(),
+                    "node_id": { "$regex": prefix, "$options": "" },
+                    "is_leaf": true,
+                })
+                .sort(doc! { "node_id": 1 })
+                .await
+                .map_err(|e| err("find canonical leaves", e))?;
+            while let Some(d) = leaf_cursor.try_next().await.map_err(|e| err("cursor", e))? {
+                let id_str = d.get_str("node_id").map_err(|e| err("col", e))?;
+                if id_str == sec_id || id_str.starts_with(&format!("{sec_id}/")) {
+                    out.push(doc_to_node(d)?);
+                }
+            }
+        }
+        Ok(out)
     }
 
     async fn bm25_search(&self, query: &str, limit: usize) -> Result<Vec<SearchHit>> {
@@ -712,6 +833,29 @@ async fn search_impl(
         });
     }
     Ok(out)
+}
+
+/// Convert an `Option<&[u8; 32]>` to a BSON Binary or Null.
+fn hash32_to_bson(h: Option<&[u8; 32]>) -> Bson {
+    match h {
+        Some(bytes) => Bson::Binary(Binary {
+            subtype: mongodb::bson::spec::BinarySubtype::Generic,
+            bytes: bytes.to_vec(),
+        }),
+        None => Bson::Null,
+    }
+}
+
+/// Extract a `[u8; 32]` from an optional BSON value (Binary expected).
+fn bson_to_hash32(v: Option<&Bson>) -> Option<[u8; 32]> {
+    if let Some(Bson::Binary(Binary { bytes, .. })) = v {
+        if bytes.len() == 32 {
+            let mut arr = [0u8; 32];
+            arr.copy_from_slice(bytes);
+            return Some(arr);
+        }
+    }
+    None
 }
 
 fn regex_escape(s: &str) -> String {
