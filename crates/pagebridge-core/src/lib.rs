@@ -29,8 +29,8 @@ pub use audit_hook::{
 };
 pub use facade::{Pagebridge, PagebridgeOptions};
 pub use ingest::{
-    BatchWriterConfig, IngestStage, ProgressSnapshot, ProgressTracker, SummaryTask,
-    SummaryWorkerConfig, WriterStats,
+    classify_document, BatchWriterConfig, ClassifyConfig, IngestStage, ProgressSnapshot,
+    ProgressTracker, SummaryTask, SummaryWorkerConfig, WriterStats,
 };
 
 pub use adapter::StorageAdapter;

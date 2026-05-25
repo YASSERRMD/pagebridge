@@ -38,6 +38,7 @@
 )]
 
 pub mod batch_writer;
+pub mod classify;
 pub mod markdown;
 pub mod pdf;
 pub mod plain;
@@ -47,6 +48,7 @@ pub mod tree;
 pub mod worker;
 
 pub use batch_writer::{BatchWriterConfig, WriterStats};
+pub use classify::{classify_document, ClassifyConfig};
 pub use progress::{IngestStage, ProgressSnapshot, ProgressTracker};
 pub use scheduler::DispatchScheduler;
 pub use worker::{SummaryTask, SummaryWorkerConfig};
