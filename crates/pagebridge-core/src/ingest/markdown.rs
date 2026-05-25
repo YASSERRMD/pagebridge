@@ -25,6 +25,8 @@ pub fn parse(doc_id: &DocId, title: &str, text: &str) -> Result<Vec<NodeRecord>>
         created_at: now_ms(),
         updated_at: now_ms(),
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     };
     nodes.push(root);
 
@@ -129,6 +131,8 @@ pub fn parse(doc_id: &DocId, title: &str, text: &str) -> Result<Vec<NodeRecord>>
                 created_at: now_ms(),
                 updated_at: now_ms(),
                 source_hash: [0; 32],
+                canonical_section: None,
+                section_aliases: vec![],
             });
             stack.push((lvl, id, 0));
             body_buf_start = byte_cursor + line_len;

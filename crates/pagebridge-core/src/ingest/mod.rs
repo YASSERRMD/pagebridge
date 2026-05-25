@@ -67,6 +67,7 @@ use crate::id::{DocId, NodeId};
 use crate::llm::{ChatMessage, CompletionRequest, LlmProvider};
 use crate::prompts::{PromptContext, PromptLibrary};
 use crate::record::{NodeLevel, NodeRecord};
+use crate::section_schema::document_schema_for;
 use crate::types::{
     DocumentEntry, DocumentHandle, DocumentType, IngestParams, SourceKind, SummaryCacheEntry,
 };
@@ -269,6 +270,11 @@ pub async fn ingest_full(
             }
         }
     }
+
+    // Phase J3: stamp each section/subsection node with the canonical section
+    // name resolved from the document-type schema. Runs after preservation so
+    // re-ingest keeps correct tags even when the source hash is reused.
+    tag_section_nodes(&mut preserved, doc_type);
 
     // Use the explicit batch API so storage backends collapse 250 inserts
     // into one transaction (50-100x faster on SQLite/Postgres).
@@ -767,6 +773,30 @@ pub(crate) fn now_ms() -> i64 {
         .map_or(0, |d| d.as_millis() as i64)
 }
 
+/// Phase J3: apply canonical section tags to section-level nodes.
+///
+/// For each node at [`NodeLevel::Section`] or [`NodeLevel::Subsection`] the
+/// function consults the [`DocumentSchema`] for `doc_type` and, when the
+/// node's title matches an alias, writes:
+/// * `canonical_section` = the matched schema's `canonical_name`
+/// * `section_aliases` = the full alias list from the schema
+///
+/// Unmatched nodes and leaf nodes are left unchanged.
+/// When `doc_type` is `None` the function is a no-op.
+pub fn tag_section_nodes(nodes: &mut [NodeRecord], doc_type: Option<DocumentType>) {
+    let Some(dt) = doc_type else { return };
+    let schema = document_schema_for(dt);
+    for node in nodes.iter_mut() {
+        if node.level != NodeLevel::Section && node.level != NodeLevel::Subsection {
+            continue;
+        }
+        if let Some(sec) = schema.canonical_for(&node.title) {
+            node.canonical_section = Some(sec.canonical_name.to_owned());
+            node.section_aliases = sec.aliases.iter().map(|a| (*a).to_owned()).collect();
+        }
+    }
+}
+
 /// Convenience: build a leaf NodeRecord.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn make_leaf(
@@ -797,5 +827,7 @@ pub(crate) fn make_leaf(
         created_at: now_ms(),
         updated_at: now_ms(),
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     })
 }

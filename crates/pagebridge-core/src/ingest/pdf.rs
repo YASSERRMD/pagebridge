@@ -37,6 +37,8 @@ pub fn parse_bytes(doc_id: &DocId, title: &str, bytes: &[u8]) -> Result<Vec<Node
         created_at: now_ms(),
         updated_at: now_ms(),
         source_hash: [0; 32],
+        canonical_section: None,
+        section_aliases: vec![],
     });
 
     let mut leaf_seq: u32 = 0;
@@ -66,6 +68,8 @@ pub fn parse_bytes(doc_id: &DocId, title: &str, bytes: &[u8]) -> Result<Vec<Node
             created_at: now_ms(),
             updated_at: now_ms(),
             source_hash: [0; 32],
+            canonical_section: None,
+            section_aliases: vec![],
         });
 
         // Chunk page into leaves.
