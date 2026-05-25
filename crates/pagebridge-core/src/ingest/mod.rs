@@ -67,7 +67,9 @@ use crate::id::{DocId, NodeId};
 use crate::llm::{ChatMessage, CompletionRequest, LlmProvider};
 use crate::prompts::{PromptContext, PromptLibrary};
 use crate::record::{NodeLevel, NodeRecord};
-use crate::types::{DocumentEntry, DocumentHandle, IngestParams, SourceKind, SummaryCacheEntry};
+use crate::types::{
+    DocumentEntry, DocumentHandle, DocumentType, IngestParams, SourceKind, SummaryCacheEntry,
+};
 
 /// Build a tree from raw bytes per the given source kind. Returns
 /// `(doc_id, leaves_count, byte_count, raw_text, nodes)`.
@@ -138,12 +140,50 @@ pub async fn ingest_with_config(
 /// Drive ingestion with both worker tuning and an optional shared
 /// [`ProgressTracker`]. When the tracker is `Some`, every worker reports
 /// counters into it so callers can render real-time progress.
+///
+/// This convenience entry point keeps the pre-Phase-J1 signature and
+/// always passes a *disabled* [`ClassifyConfig`] to [`ingest_full`].
+/// New callers (the facade, the CLI) should prefer [`ingest_full`] so
+/// they can opt into the document-type classifier.
 pub async fn ingest_with_progress(
     storage: Arc<dyn StorageAdapter>,
     llm: Arc<dyn LlmProvider>,
     prompts: Arc<PromptLibrary>,
     params: IngestParams,
     worker_config: SummaryWorkerConfig,
+    progress: Option<Arc<ProgressTracker>>,
+) -> Result<(DocumentHandle, JoinHandle<Result<()>>)> {
+    ingest_full(
+        storage,
+        llm,
+        prompts,
+        params,
+        worker_config,
+        ClassifyConfig {
+            enabled: false,
+            ..ClassifyConfig::default()
+        },
+        progress,
+    )
+    .await
+}
+
+/// Full-fat ingestion entry point. Honors both the summary fan-out
+/// concurrency config and the Phase J1 [`ClassifyConfig`].
+///
+/// When `classify.enabled` is true the document is classified up front
+/// via the configured LLM and the verdict is persisted on
+/// [`DocumentEntry::document_type`]. A classifier failure (provider
+/// error, malformed JSON, low confidence) silently falls back to
+/// [`DocumentType::Generic`] so ingest never aborts on a misbehaving
+/// model.
+pub async fn ingest_full(
+    storage: Arc<dyn StorageAdapter>,
+    llm: Arc<dyn LlmProvider>,
+    prompts: Arc<PromptLibrary>,
+    params: IngestParams,
+    worker_config: SummaryWorkerConfig,
+    classify: ClassifyConfig,
     progress: Option<Arc<ProgressTracker>>,
 ) -> Result<(DocumentHandle, JoinHandle<Result<()>>)> {
     let start = now_ms();
@@ -155,8 +195,8 @@ pub async fn ingest_with_progress(
 
     // Fast path: if a document with this doc_id already exists and the new
     // raw text hashes to the same value, skip parsing+structural+summary
-    // entirely. Returns a no-op handle and a JoinHandle that resolves
-    // immediately to Ok.
+    // entirely. Runs BEFORE the J1 classifier so a no-op re-ingest never
+    // pays for an extra LLM call.
     let raw_hash = source_hash(&params.raw_text);
     if let Ok(existing) = storage.list_documents().await {
         if let Some(prev) = existing.into_iter().find(|d| d.doc_id == built.doc_id) {
@@ -182,6 +222,32 @@ pub async fn ingest_with_progress(
             }
         }
     }
+
+    // Phase J1: classify the document. The sample is drawn from the
+    // start of the (utf8-decoded) raw text. Failures are logged and
+    // downgraded to Generic so ingest cannot regress on a misbehaving
+    // classifier. Runs only on a genuine new-or-changed ingest, after
+    // the skip-on-equivalent fast path has been ruled out, so identical
+    // re-ingests stay free.
+    let doc_type = if classify.enabled {
+        let sample = std::str::from_utf8(&params.raw_text).unwrap_or_default();
+        match classify::classify_document(&llm, &params.title, sample, classify).await {
+            Ok((kind, confidence)) => {
+                tracing::debug!(
+                    document_type = kind.as_str(),
+                    confidence,
+                    "Phase J1 classifier verdict"
+                );
+                Some(kind)
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "Phase J1 classifier failed; falling back to Generic");
+                Some(DocumentType::Generic)
+            }
+        }
+    } else {
+        None
+    };
     let root_node_id = NodeId::root(&built.doc_id);
     let doc_id = built.doc_id.clone();
     if let Some(p) = &progress {
@@ -221,7 +287,7 @@ pub async fn ingest_with_progress(
             byte_count: built.byte_count,
             raw_text_hash: Some(raw_hash),
             structural_hash: Some(structural),
-            document_type: None,
+            document_type: doc_type,
         })
         .await?;
     if let Some(p) = &progress {
