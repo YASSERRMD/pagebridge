@@ -100,6 +100,7 @@ async fn roundtrip_and_persistence() {
                 byte_count: 0,
                 raw_text_hash: None,
                 structural_hash: None,
+                document_type: None,
             })
             .await
             .unwrap();
