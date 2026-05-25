@@ -10,6 +10,7 @@
     clippy::cast_sign_loss,
     clippy::cast_lossless,
     clippy::too_many_lines,
+    clippy::too_many_arguments,
     clippy::missing_errors_doc,
     clippy::option_if_let_else,
     clippy::needless_pass_by_value,
@@ -370,6 +371,7 @@ pub async fn ingest_full(
             nodes,
             worker_config,
             progress_for_task.clone(),
+            doc_type,
         )
         .await;
         if let Some(p) = progress_for_task {
@@ -400,6 +402,7 @@ async fn summarize_document_parallel(
     nodes: Vec<NodeRecord>,
     config: SummaryWorkerConfig,
     progress: Option<Arc<ProgressTracker>>,
+    doc_type: Option<DocumentType>,
 ) -> Result<()> {
     let fingerprint = format!("{}:{}", llm.name(), llm.model());
 
@@ -509,6 +512,7 @@ async fn summarize_document_parallel(
                     &fingerprint,
                     Some(&dispatch_ref),
                     Some(&writer_tx),
+                    doc_type,
                 );
                 let outcome = tokio::time::timeout(task_timeout, fut).await;
                 match outcome {
@@ -615,6 +619,7 @@ async fn summarize_one_node(
     fingerprint: &str,
     dispatch: Option<&Arc<DispatchScheduler>>,
     writer_tx: Option<&async_channel::Sender<NodeRecord>>,
+    doc_type: Option<DocumentType>,
 ) -> Result<()> {
     if node.is_leaf {
         let mut updated = node.clone();
@@ -650,12 +655,16 @@ async fn summarize_one_node(
         .filter(|e| e.model_fingerprint == fingerprint);
 
     if cached.is_none() {
+        // Phase J5: use the most specific summarize prompt available for this
+        // node's document type and canonical section.
         let ctx = PromptContext {
             document_title: Some(node.title.clone()),
             raw_text: Some(child_payload.clone()),
+            document_type: doc_type,
+            canonical_section: node.canonical_section.clone(),
             ..PromptContext::default()
         };
-        let prompt = prompts.render("summarize", &ctx)?;
+        let prompt = prompts.render_summarize(&ctx)?;
         if let Some(sched) = dispatch {
             // Pay tokens-per-minute before issuing the request. The estimate
             // is a lower bound but the limiter naturally backpressures, so a

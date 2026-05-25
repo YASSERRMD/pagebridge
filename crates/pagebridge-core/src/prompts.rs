@@ -14,6 +14,7 @@ use std::collections::HashMap;
 
 use crate::error::{PagebridgeError, Result};
 use crate::record::{NodeRecord, NodeSummary};
+use crate::types::DocumentType;
 
 /// Context passed into a prompt render. Holds every variable a template can
 /// reference.
@@ -25,6 +26,12 @@ pub struct PromptContext {
     pub raw_text: Option<String>,
     pub document_title: Option<String>,
     pub current_path: Vec<NodeSummary>,
+    /// Phase J5: document type used to select type-aware summarize prompts.
+    pub document_type: Option<DocumentType>,
+    /// Phase J5: canonical section name (e.g. "experience") for section-level
+    /// summarization. When set together with `document_type`, the library
+    /// picks the most specific prompt available.
+    pub canonical_section: Option<String>,
 }
 
 /// Versioned bundle of prompt templates.
@@ -35,7 +42,8 @@ pub struct PromptLibrary {
 }
 
 impl PromptLibrary {
-    /// Returns the bundle of v1 prompts.
+    /// Returns the bundle of v1 prompts, including Phase J5 type-specific
+    /// summarization prompts for resume and research paper sections.
     #[must_use]
     pub fn v1() -> Self {
         let mut templates: HashMap<&'static str, &'static str> = HashMap::new();
@@ -43,6 +51,59 @@ impl PromptLibrary {
         templates.insert("summarize", SUMMARIZE_V1);
         templates.insert("synthesize", SYNTHESIZE_V1);
         templates.insert("keywords", KEYWORDS_V1);
+        // Phase J5: type-specific summarize prompts.
+        // Resume sections.
+        templates.insert(
+            "summarize_resume_experience",
+            SUMMARIZE_RESUME_EXPERIENCE_V1,
+        );
+        templates.insert("summarize_resume_skills", SUMMARIZE_RESUME_SKILLS_V1);
+        templates.insert("summarize_resume_education", SUMMARIZE_RESUME_EDUCATION_V1);
+        templates.insert("summarize_resume_summary", SUMMARIZE_RESUME_SUMMARY_V1);
+        templates.insert(
+            "summarize_resume_certifications",
+            SUMMARIZE_RESUME_CERTIFICATIONS_V1,
+        );
+        // Research paper sections.
+        templates.insert(
+            "summarize_research_paper_abstract",
+            SUMMARIZE_RESEARCH_PAPER_ABSTRACT_V1,
+        );
+        templates.insert(
+            "summarize_research_paper_methodology",
+            SUMMARIZE_RESEARCH_PAPER_METHODOLOGY_V1,
+        );
+        templates.insert(
+            "summarize_research_paper_results",
+            SUMMARIZE_RESEARCH_PAPER_RESULTS_V1,
+        );
+        templates.insert(
+            "summarize_research_paper_conclusion",
+            SUMMARIZE_RESEARCH_PAPER_CONCLUSION_V1,
+        );
+        // Legal document sections.
+        templates.insert(
+            "summarize_legal_document_obligations",
+            SUMMARIZE_LEGAL_OBLIGATIONS_V1,
+        );
+        templates.insert(
+            "summarize_legal_document_definitions",
+            SUMMARIZE_LEGAL_DEFINITIONS_V1,
+        );
+        // Business report sections.
+        templates.insert(
+            "summarize_business_report_executive_summary",
+            SUMMARIZE_BUSINESS_REPORT_EXEC_V1,
+        );
+        templates.insert(
+            "summarize_business_report_recommendations",
+            SUMMARIZE_BUSINESS_REPORT_RECS_V1,
+        );
+        // Meeting minutes sections.
+        templates.insert(
+            "summarize_meeting_minutes_action_items",
+            SUMMARIZE_MEETING_ACTION_ITEMS_V1,
+        );
         Self {
             version: 1,
             templates,
@@ -61,6 +122,61 @@ impl PromptLibrary {
             PagebridgeError::InvalidArgument(format!("unknown prompt name: {name}"))
         })?;
         render_template(tpl, ctx)
+    }
+
+    /// Phase J5: render the best summarize prompt available for the given
+    /// context.
+    ///
+    /// Lookup priority (most specific to least):
+    /// 1. `summarize_{doc_type}_{canonical_section}` (e.g. `summarize_resume_experience`)
+    /// 2. `summarize_{doc_type}` (type-level fallback)
+    /// 3. `summarize` (generic fallback, always present)
+    pub fn render_summarize(&self, ctx: &PromptContext) -> Result<String> {
+        // Try most specific: type + section.
+        if let (Some(dt), Some(sec)) = (ctx.document_type, &ctx.canonical_section) {
+            let key = format!("summarize_{}_{}", dt.as_str(), sec);
+            if let Some(tpl) = self.templates.get(key.as_str()) {
+                return render_template(tpl, ctx);
+            }
+        }
+        // Try type-level fallback.
+        if let Some(dt) = ctx.document_type {
+            let key = format!("summarize_{}", dt.as_str());
+            if let Some(tpl) = self.templates.get(key.as_str()) {
+                return render_template(tpl, ctx);
+            }
+        }
+        // Generic fallback always exists.
+        self.render("summarize", ctx)
+    }
+
+    /// Return the prompt name that `render_summarize` would pick for a given
+    /// document type and canonical section. Useful for tracing and tests.
+    #[must_use]
+    pub fn summarize_prompt_name(
+        &self,
+        doc_type: Option<DocumentType>,
+        canonical_section: Option<&str>,
+    ) -> &'static str {
+        if let (Some(dt), Some(sec)) = (doc_type, canonical_section) {
+            let key = format!("summarize_{}_{}", dt.as_str(), sec);
+            if self.templates.contains_key(key.as_str()) {
+                return self
+                    .templates
+                    .get_key_value(key.as_str())
+                    .map_or("summarize", |(k, _)| *k);
+            }
+        }
+        if let Some(dt) = doc_type {
+            let key = format!("summarize_{}", dt.as_str());
+            if self.templates.contains_key(key.as_str()) {
+                return self
+                    .templates
+                    .get_key_value(key.as_str())
+                    .map_or("summarize", |(k, _)| *k);
+            }
+        }
+        "summarize"
     }
 
     /// JSON schema for the navigate prompt's response.
@@ -170,6 +286,262 @@ const KEYWORDS_V1: &str = r"Extract up to 8 keywords from the following text. Re
 TEXT:
 {{raw_text}}
 ";
+
+// ---------------------------------------------------------------------------
+// Phase J5: type-specific summarize prompt templates
+// ---------------------------------------------------------------------------
+
+const SUMMARIZE_RESUME_EXPERIENCE_V1: &str = r#"Summarize the work experience section of a resume for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: job titles, company names, employment dates, key responsibilities, and concrete achievements (metrics, promotions, projects delivered).
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters naming the employers and date range.
+- "summary": 2 to 4 sentences capturing the progression of roles, key skills demonstrated, and notable outcomes.
+- "keywords": up to 8 keywords (job titles, technologies, skills, company names).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_RESUME_SKILLS_V1: &str = r#"Summarize the skills section of a resume for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: technical skills, programming languages, frameworks, tools, and any proficiency levels mentioned.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters listing the main skill categories.
+- "summary": 2 to 4 sentences capturing the breadth and depth of technical and non-technical skills.
+- "keywords": up to 8 keywords drawn directly from the skill list.
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_RESUME_EDUCATION_V1: &str = r#"Summarize the education section of a resume for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: degrees, institutions, graduation years, majors/minors, GPA if stated, and relevant coursework or honors.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters naming the degree(s) and institution(s).
+- "summary": 2 to 4 sentences covering the candidate's academic background and any notable achievements.
+- "keywords": up to 8 keywords (degree names, institutions, fields of study).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_RESUME_SUMMARY_V1: &str = r#"Summarize the professional summary or objective of a resume for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: career goals, years of experience, primary domain, and the value the candidate offers.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters capturing the candidate's headline.
+- "summary": 2 to 4 sentences that reproduce the key positioning claims from the professional summary.
+- "keywords": up to 8 keywords (role names, domains, key skills mentioned).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_RESUME_CERTIFICATIONS_V1: &str = r#"Summarize the certifications section of a resume for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: certification names, issuing bodies, and dates obtained or expiry.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters listing the main certifications.
+- "summary": 2 to 4 sentences covering the credentials and what they attest to.
+- "keywords": up to 8 keywords (certification names, vendors, domains).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_RESEARCH_PAPER_ABSTRACT_V1: &str = r#"Summarize the abstract of a research paper for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: the core research question, the approach taken, the key finding, and the claimed significance.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters capturing the paper's contribution.
+- "summary": 2 to 4 sentences covering the research problem, method, result, and impact.
+- "keywords": up to 8 keywords (problem domain, methods, datasets, metrics).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_RESEARCH_PAPER_METHODOLOGY_V1: &str = r#"Summarize the methodology section of a research paper for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: the experimental design, datasets used, model architectures or algorithms, evaluation metrics, and baselines compared against.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters describing the experimental approach.
+- "summary": 2 to 4 sentences covering the method, data, and evaluation setup.
+- "keywords": up to 8 keywords (algorithms, datasets, metrics, techniques).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_RESEARCH_PAPER_RESULTS_V1: &str = r#"Summarize the results section of a research paper for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: quantitative outcomes, comparisons to baselines, ablation findings, and whether the hypothesis was supported.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters giving the headline result.
+- "summary": 2 to 4 sentences covering the main metrics, comparisons, and statistical significance where stated.
+- "keywords": up to 8 keywords (metric names, model names, benchmark names, key numeric results).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_RESEARCH_PAPER_CONCLUSION_V1: &str = r#"Summarize the conclusion of a research paper for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: the main takeaway, limitations acknowledged, and future work directions.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters capturing the conclusion's message.
+- "summary": 2 to 4 sentences on the contribution, its limitations, and the next research directions proposed.
+- "keywords": up to 8 keywords (findings, limitations, future directions).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_LEGAL_OBLIGATIONS_V1: &str = r#"Summarize the obligations section of a legal document for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: what each party must do, deadlines, conditions, and consequences of non-compliance.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters naming the key obligations.
+- "summary": 2 to 4 sentences covering who must do what, by when, and under what conditions.
+- "keywords": up to 8 keywords (parties, obligations, deadlines, conditions).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_LEGAL_DEFINITIONS_V1: &str = r#"Summarize the definitions section of a legal document for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: the defined terms and their meanings as used throughout the agreement.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters listing the key defined terms.
+- "summary": 2 to 4 sentences describing the most important defined terms and their scope.
+- "keywords": up to 8 keywords (the defined terms themselves).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_BUSINESS_REPORT_EXEC_V1: &str = r#"Summarize the executive summary of a business report for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: the purpose of the report, the key findings, the recommended actions, and the business impact.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters stating the report's core message.
+- "summary": 2 to 4 sentences covering the business context, key insight, and recommended next step.
+- "keywords": up to 8 keywords (business domain, key metrics, recommended actions).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_BUSINESS_REPORT_RECS_V1: &str = r#"Summarize the recommendations section of a business report for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: the specific recommended actions, the rationale for each, and the expected outcomes or benefits.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters listing the top recommendations.
+- "summary": 2 to 4 sentences covering the recommended actions, their priority, and expected impact.
+- "keywords": up to 8 keywords (action items, business areas, expected outcomes).
+
+Respond ONLY with the JSON object, no prose.
+"#;
+
+const SUMMARIZE_MEETING_ACTION_ITEMS_V1: &str = r#"Summarize the action items section of meeting minutes for a hierarchical retrieval index.
+
+SECTION TITLE: {{document_title}}
+
+RAW TEXT:
+{{raw_text}}
+
+Focus on: who is responsible for each action, what exactly must be done, and any stated deadlines.
+
+Produce a JSON object with these fields:
+- "title": a short descriptive title under 80 characters.
+- "routing_summary": a single TOC-style line under 200 characters listing the key action items and owners.
+- "summary": 2 to 4 sentences covering the assigned tasks, responsible parties, and due dates.
+- "keywords": up to 8 keywords (assignees, tasks, deadlines).
+
+Respond ONLY with the JSON object, no prose.
+"#;
 
 fn render_template(tpl: &str, ctx: &PromptContext) -> Result<String> {
     let mut out = String::with_capacity(tpl.len());
