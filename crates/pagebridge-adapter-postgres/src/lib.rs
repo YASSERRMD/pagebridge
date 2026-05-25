@@ -18,7 +18,9 @@ use pagebridge_core::adapter::StorageAdapter;
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::id::{DocId, NodeId};
 use pagebridge_core::record::{NodeLevel, NodeRecord, NodeSummary};
-use pagebridge_core::types::{AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry};
+use pagebridge_core::types::{
+    AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry,
+};
 use sqlx::postgres::{PgPool, PgPoolOptions, PgRow};
 use sqlx::Row;
 
@@ -92,8 +94,9 @@ fn row_to_node(row: PgRow) -> Result<NodeRecord> {
     let created_at: i64 = row.try_get("created_at").map_err(|e| err("col", e))?;
     let updated_at: i64 = row.try_get("updated_at").map_err(|e| err("col", e))?;
     let source_hash_blob: Vec<u8> = row.try_get("source_hash").map_err(|e| err("col", e))?;
-    let canonical_section: Option<String> =
-        row.try_get("canonical_section").map_err(|e| err("col", e))?;
+    let canonical_section: Option<String> = row
+        .try_get("canonical_section")
+        .map_err(|e| err("col", e))?;
     let section_aliases_json: sqlx::types::JsonValue =
         row.try_get("section_aliases").map_err(|e| err("col", e))?;
     let mut hash = [0u8; 32];
@@ -104,8 +107,8 @@ fn row_to_node(row: PgRow) -> Result<NodeRecord> {
         serde_json::from_value(child_ids_json).map_err(|e| err("decode child_ids", e))?;
     let keywords: Vec<String> =
         serde_json::from_value(keywords_json).map_err(|e| err("decode keywords", e))?;
-    let section_aliases: Vec<String> =
-        serde_json::from_value(section_aliases_json).map_err(|e| err("decode section_aliases", e))?;
+    let section_aliases: Vec<String> = serde_json::from_value(section_aliases_json)
+        .map_err(|e| err("decode section_aliases", e))?;
     let mut child_ids = Vec::with_capacity(child_strs.len());
     for c in child_strs {
         child_ids.push(NodeId::new(c)?);
@@ -249,26 +252,26 @@ impl StorageAdapter for PostgresAdapter {
                 section_aliases = EXCLUDED.section_aliases,
                 search_vec = EXCLUDED.search_vec",
         )
-        .bind(node.node_id.as_str())        // $1
-        .bind(node.doc_id.as_str())          // $2
+        .bind(node.node_id.as_str()) // $1
+        .bind(node.doc_id.as_str()) // $2
         .bind(node.parent_id.as_ref().map(|p| p.as_str().to_owned())) // $3
-        .bind(&node.title)                   // $4
-        .bind(level_to_i32(node.level))      // $5
-        .bind(&node.routing_summary)         // $6
-        .bind(&node.summary)                 // $7
-        .bind(child_ids_json)                // $8
+        .bind(&node.title) // $4
+        .bind(level_to_i32(node.level)) // $5
+        .bind(&node.routing_summary) // $6
+        .bind(&node.summary) // $7
+        .bind(child_ids_json) // $8
         .bind(node.span.map(|(a, _)| a as i64)) // $9
         .bind(node.span.map(|(_, b)| b as i64)) // $10
         .bind(node.page_start.map(|v| v as i32)) // $11
-        .bind(node.page_end.map(|v| v as i32))   // $12
-        .bind(keywords_json)                 // $13
-        .bind(node.is_leaf)                  // $14
-        .bind(node.created_at)               // $15
-        .bind(node.updated_at)               // $16
-        .bind(&node.source_hash[..])         // $17
-        .bind(node.keywords.join(" "))       // $18 (tsvector text)
+        .bind(node.page_end.map(|v| v as i32)) // $12
+        .bind(keywords_json) // $13
+        .bind(node.is_leaf) // $14
+        .bind(node.created_at) // $15
+        .bind(node.updated_at) // $16
+        .bind(&node.source_hash[..]) // $17
+        .bind(node.keywords.join(" ")) // $18 (tsvector text)
         .bind(node.canonical_section.as_deref()) // $19
-        .bind(section_aliases_json)          // $20
+        .bind(section_aliases_json) // $20
         .execute(&self.pool)
         .await
         .map_err(|e| err("upsert_node", e))?;
@@ -323,26 +326,26 @@ impl StorageAdapter for PostgresAdapter {
                     section_aliases = EXCLUDED.section_aliases,
                     search_vec = EXCLUDED.search_vec",
             )
-            .bind(node.node_id.as_str())         // $1
-            .bind(node.doc_id.as_str())           // $2
+            .bind(node.node_id.as_str()) // $1
+            .bind(node.doc_id.as_str()) // $2
             .bind(node.parent_id.as_ref().map(|p| p.as_str().to_owned())) // $3
-            .bind(&node.title)                    // $4
-            .bind(level_to_i32(node.level))       // $5
-            .bind(&node.routing_summary)          // $6
-            .bind(&node.summary)                  // $7
-            .bind(child_ids_json)                 // $8
+            .bind(&node.title) // $4
+            .bind(level_to_i32(node.level)) // $5
+            .bind(&node.routing_summary) // $6
+            .bind(&node.summary) // $7
+            .bind(child_ids_json) // $8
             .bind(node.span.map(|(a, _)| a as i64)) // $9
             .bind(node.span.map(|(_, b)| b as i64)) // $10
             .bind(node.page_start.map(|v| v as i32)) // $11
-            .bind(node.page_end.map(|v| v as i32))   // $12
-            .bind(keywords_json)                  // $13
-            .bind(node.is_leaf)                   // $14
-            .bind(node.created_at)                // $15
-            .bind(node.updated_at)                // $16
-            .bind(&node.source_hash[..])          // $17
-            .bind(node.keywords.join(" "))        // $18 (tsvector text)
+            .bind(node.page_end.map(|v| v as i32)) // $12
+            .bind(keywords_json) // $13
+            .bind(node.is_leaf) // $14
+            .bind(node.created_at) // $15
+            .bind(node.updated_at) // $16
+            .bind(&node.source_hash[..]) // $17
+            .bind(node.keywords.join(" ")) // $18 (tsvector text)
             .bind(node.canonical_section.as_deref()) // $19
-            .bind(section_aliases_json)           // $20
+            .bind(section_aliases_json) // $20
             .execute(&mut *tx)
             .await
             .map_err(|e| err("batch upsert_node", e))?;
@@ -489,10 +492,22 @@ impl StorageAdapter for PostgresAdapter {
             let document_type_str: Option<String> =
                 row.try_get("document_type").map_err(|e| err("col", e))?;
             let raw_text_hash = raw_text_hash_blob.and_then(|b| {
-                if b.len() == 32 { let mut a = [0u8; 32]; a.copy_from_slice(&b); Some(a) } else { None }
+                if b.len() == 32 {
+                    let mut a = [0u8; 32];
+                    a.copy_from_slice(&b);
+                    Some(a)
+                } else {
+                    None
+                }
             });
             let structural_hash = structural_hash_blob.and_then(|b| {
-                if b.len() == 32 { let mut a = [0u8; 32]; a.copy_from_slice(&b); Some(a) } else { None }
+                if b.len() == 32 {
+                    let mut a = [0u8; 32];
+                    a.copy_from_slice(&b);
+                    Some(a)
+                } else {
+                    None
+                }
             });
             out.push(DocumentEntry {
                 doc_id: DocId::new(doc_id)?,
@@ -504,7 +519,9 @@ impl StorageAdapter for PostgresAdapter {
                 byte_count: byte_count as u64,
                 raw_text_hash,
                 structural_hash,
-                document_type: document_type_str.as_deref().and_then(DocumentType::parse_tag),
+                document_type: document_type_str
+                    .as_deref()
+                    .and_then(DocumentType::parse_tag),
             });
         }
         Ok(out)
@@ -543,10 +560,7 @@ impl StorageAdapter for PostgresAdapter {
         Ok(())
     }
 
-    async fn get_document_entry(
-        &self,
-        doc_id: &DocId,
-    ) -> Result<Option<DocumentEntry>> {
+    async fn get_document_entry(&self, doc_id: &DocId) -> Result<Option<DocumentEntry>> {
         let row = sqlx::query("SELECT * FROM pagebridge_docs WHERE doc_id = $1")
             .bind(doc_id.as_str())
             .fetch_optional(&self.pool)
@@ -566,10 +580,22 @@ impl StorageAdapter for PostgresAdapter {
         let document_type_str: Option<String> =
             row.try_get("document_type").map_err(|e| err("col", e))?;
         let raw_text_hash = raw_text_hash_blob.and_then(|b| {
-            if b.len() == 32 { let mut a = [0u8; 32]; a.copy_from_slice(&b); Some(a) } else { None }
+            if b.len() == 32 {
+                let mut a = [0u8; 32];
+                a.copy_from_slice(&b);
+                Some(a)
+            } else {
+                None
+            }
         });
         let structural_hash = structural_hash_blob.and_then(|b| {
-            if b.len() == 32 { let mut a = [0u8; 32]; a.copy_from_slice(&b); Some(a) } else { None }
+            if b.len() == 32 {
+                let mut a = [0u8; 32];
+                a.copy_from_slice(&b);
+                Some(a)
+            } else {
+                None
+            }
         });
         Ok(Some(DocumentEntry {
             doc_id: doc_id.clone(),
@@ -581,7 +607,9 @@ impl StorageAdapter for PostgresAdapter {
             byte_count: byte_count as u64,
             raw_text_hash,
             structural_hash,
-            document_type: document_type_str.as_deref().and_then(DocumentType::parse_tag),
+            document_type: document_type_str
+                .as_deref()
+                .and_then(DocumentType::parse_tag),
         }))
     }
 

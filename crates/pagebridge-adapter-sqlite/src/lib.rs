@@ -20,7 +20,9 @@ use pagebridge_core::adapter::StorageAdapter;
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::id::{DocId, NodeId};
 use pagebridge_core::record::{NodeLevel, NodeRecord, NodeSummary};
-use pagebridge_core::types::{AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry};
+use pagebridge_core::types::{
+    AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry,
+};
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePool, SqlitePoolOptions};
 use sqlx::Row;
 
@@ -149,8 +151,8 @@ fn row_to_node(row: sqlx::sqlite::SqliteRow) -> Result<NodeRecord> {
         serde_json::from_str(&child_ids).map_err(|e| err("decode child_ids", e))?;
     let keywords: Vec<String> =
         serde_json::from_str(&keywords).map_err(|e| err("decode keywords", e))?;
-    let section_aliases: Vec<String> =
-        serde_json::from_str(&section_aliases_json).map_err(|e| err("decode section_aliases", e))?;
+    let section_aliases: Vec<String> = serde_json::from_str(&section_aliases_json)
+        .map_err(|e| err("decode section_aliases", e))?;
     let mut child_node_ids = Vec::with_capacity(child_ids.len());
     for c in child_ids {
         child_node_ids.push(NodeId::new(c)?);
@@ -359,8 +361,8 @@ impl StorageAdapter for SqliteAdapter {
                 serde_json::to_string(&child_ids_json).map_err(|e| err("encode kids", e))?;
             let keywords =
                 serde_json::to_string(&node.keywords).map_err(|e| err("encode kw", e))?;
-            let section_aliases =
-                serde_json::to_string(&node.section_aliases).map_err(|e| err("encode aliases", e))?;
+            let section_aliases = serde_json::to_string(&node.section_aliases)
+                .map_err(|e| err("encode aliases", e))?;
             sqlx::query(
                 "INSERT INTO pagebridge_nodes (
                     node_id, doc_id, parent_id, title, level, routing_summary, summary, child_ids,
@@ -638,10 +640,7 @@ impl StorageAdapter for SqliteAdapter {
         Ok(())
     }
 
-    async fn get_document_entry(
-        &self,
-        doc_id: &DocId,
-    ) -> Result<Option<DocumentEntry>> {
+    async fn get_document_entry(&self, doc_id: &DocId) -> Result<Option<DocumentEntry>> {
         let row = sqlx::query("SELECT * FROM pagebridge_docs WHERE doc_id = ?")
             .bind(doc_id.as_str())
             .fetch_optional(&self.pool)

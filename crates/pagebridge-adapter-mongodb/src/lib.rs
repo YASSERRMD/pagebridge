@@ -23,7 +23,9 @@ use pagebridge_core::adapter::StorageAdapter;
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::id::{DocId, NodeId};
 use pagebridge_core::record::{NodeLevel, NodeRecord, NodeSummary};
-use pagebridge_core::types::{AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry};
+use pagebridge_core::types::{
+    AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry,
+};
 
 const RAW_CHUNK_LIMIT: usize = 1024 * 1024;
 
@@ -123,8 +125,12 @@ fn node_to_doc(node: &NodeRecord) -> Document {
         d.insert("page_end", i32::try_from(p).unwrap_or(i32::MAX));
     }
     match &node.canonical_section {
-        Some(s) => { d.insert("canonical_section", s.clone()); }
-        None => { d.insert("canonical_section", Bson::Null); }
+        Some(s) => {
+            d.insert("canonical_section", s.clone());
+        }
+        None => {
+            d.insert("canonical_section", Bson::Null);
+        }
     }
     let aliases: Vec<Bson> = node
         .section_aliases
@@ -455,10 +461,9 @@ impl StorageAdapter for MongoAdapter {
     async fn upsert_document(&self, doc: &DocumentEntry) -> Result<()> {
         let raw_text_hash_bson = hash32_to_bson(doc.raw_text_hash.as_ref());
         let structural_hash_bson = hash32_to_bson(doc.structural_hash.as_ref());
-        let document_type_bson = match doc.document_type {
-            Some(dt) => Bson::String(dt.as_str().to_owned()),
-            None => Bson::Null,
-        };
+        let document_type_bson = doc
+            .document_type
+            .map_or_else(|| Bson::Null, |dt| Bson::String(dt.as_str().to_owned()));
         let d = doc! {
             "_id": doc.doc_id.as_str(),
             "title": &doc.title,
@@ -479,10 +484,7 @@ impl StorageAdapter for MongoAdapter {
         Ok(())
     }
 
-    async fn get_document_entry(
-        &self,
-        doc_id: &DocId,
-    ) -> Result<Option<DocumentEntry>> {
+    async fn get_document_entry(&self, doc_id: &DocId) -> Result<Option<DocumentEntry>> {
         let opt = self
             .docs()
             .find_one(doc! { "_id": doc_id.as_str() })
@@ -490,9 +492,15 @@ impl StorageAdapter for MongoAdapter {
             .map_err(|e| err("get_document_entry", e))?;
         let Some(d) = opt else { return Ok(None) };
         let title = d.get_str("title").map_err(|e| err("col", e))?.to_owned();
-        let source_kind = d.get_str("source_kind").map_err(|e| err("col", e))?.to_owned();
+        let source_kind = d
+            .get_str("source_kind")
+            .map_err(|e| err("col", e))?
+            .to_owned();
         let ingested_at = d.get_i64("ingested_at").map_err(|e| err("col", e))?;
-        let root_node_id = d.get_str("root_node_id").map_err(|e| err("col", e))?.to_owned();
+        let root_node_id = d
+            .get_str("root_node_id")
+            .map_err(|e| err("col", e))?
+            .to_owned();
         let leaf_count = d.get_i32("leaf_count").map_err(|e| err("col", e))?;
         let byte_count = d.get_i64("byte_count").map_err(|e| err("col", e))?;
         let raw_text_hash = bson_to_hash32(d.get("raw_text_hash"));
@@ -837,13 +845,15 @@ async fn search_impl(
 
 /// Convert an `Option<&[u8; 32]>` to a BSON Binary or Null.
 fn hash32_to_bson(h: Option<&[u8; 32]>) -> Bson {
-    match h {
-        Some(bytes) => Bson::Binary(Binary {
-            subtype: mongodb::bson::spec::BinarySubtype::Generic,
-            bytes: bytes.to_vec(),
-        }),
-        None => Bson::Null,
-    }
+    h.map_or_else(
+        || Bson::Null,
+        |bytes| {
+            Bson::Binary(Binary {
+                subtype: mongodb::bson::spec::BinarySubtype::Generic,
+                bytes: bytes.to_vec(),
+            })
+        },
+    )
 }
 
 /// Extract a `[u8; 32]` from an optional BSON value (Binary expected).

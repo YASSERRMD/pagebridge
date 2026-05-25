@@ -7,7 +7,9 @@ use mysql_async::{from_value_opt, params, Pool, Row, Value};
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::id::{DocId, NodeId};
 use pagebridge_core::record::{NodeRecord, NodeSummary};
-use pagebridge_core::types::{AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry};
+use pagebridge_core::types::{
+    AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry,
+};
 
 use crate::{err, level_from_i32, level_to_i32};
 
@@ -48,8 +50,8 @@ fn row_to_node(mut row: Row) -> Result<NodeRecord> {
         serde_json::from_str(&child_ids_json).map_err(|e| err("decode child_ids", e))?;
     let keywords: Vec<String> =
         serde_json::from_str(&keywords_json).map_err(|e| err("decode keywords", e))?;
-    let section_aliases: Vec<String> =
-        serde_json::from_str(&section_aliases_json).map_err(|e| err("decode section_aliases", e))?;
+    let section_aliases: Vec<String> = serde_json::from_str(&section_aliases_json)
+        .map_err(|e| err("decode section_aliases", e))?;
     let mut child_ids = Vec::with_capacity(child_strs.len());
     for c in child_strs {
         child_ids.push(NodeId::new(c)?);
@@ -245,8 +247,20 @@ pub async fn delete_document(pool: &Pool, doc_id: &DocId) -> Result<()> {
 }
 
 pub async fn list_documents(pool: &Pool) -> Result<Vec<DocumentEntry>> {
+    type DocRow = (
+        String,
+        String,
+        String,
+        i64,
+        String,
+        i32,
+        i64,
+        Option<Vec<u8>>,
+        Option<Vec<u8>>,
+        Option<String>,
+    );
     let mut conn = pool.get_conn().await.map_err(|e| err("list conn", e))?;
-    let rows: Vec<(String, String, String, i64, String, i32, i64, Option<Vec<u8>>, Option<Vec<u8>>, Option<String>)> =
+    let rows: Vec<DocRow> =
         "SELECT doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count,
                 raw_text_hash, structural_hash, document_type
          FROM pagebridge_docs ORDER BY doc_id"
@@ -254,13 +268,36 @@ pub async fn list_documents(pool: &Pool) -> Result<Vec<DocumentEntry>> {
             .await
             .map_err(|e| err("list_documents", e))?;
     let mut out = Vec::with_capacity(rows.len());
-    for (doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count,
-         raw_hash_blob, struct_hash_blob, doc_type_str) in rows {
+    for (
+        doc_id,
+        title,
+        source_kind,
+        ingested_at,
+        root_node_id,
+        leaf_count,
+        byte_count,
+        raw_hash_blob,
+        struct_hash_blob,
+        doc_type_str,
+    ) in rows
+    {
         let raw_text_hash = raw_hash_blob.and_then(|b| {
-            if b.len() == 32 { let mut a = [0u8; 32]; a.copy_from_slice(&b); Some(a) } else { None }
+            if b.len() == 32 {
+                let mut a = [0u8; 32];
+                a.copy_from_slice(&b);
+                Some(a)
+            } else {
+                None
+            }
         });
         let structural_hash = struct_hash_blob.and_then(|b| {
-            if b.len() == 32 { let mut a = [0u8; 32]; a.copy_from_slice(&b); Some(a) } else { None }
+            if b.len() == 32 {
+                let mut a = [0u8; 32];
+                a.copy_from_slice(&b);
+                Some(a)
+            } else {
+                None
+            }
         });
         out.push(DocumentEntry {
             doc_id: DocId::new(doc_id)?,

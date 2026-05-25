@@ -3,7 +3,9 @@
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::id::{DocId, NodeId};
 use pagebridge_core::record::{NodeRecord, NodeSummary};
-use pagebridge_core::types::{AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry};
+use pagebridge_core::types::{
+    AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry,
+};
 use tiberius::{Query, Row};
 
 use crate::{err, level_from_i32, level_to_i32, MsPool};
@@ -85,8 +87,8 @@ fn row_to_node(row: &Row) -> Result<NodeRecord> {
         serde_json::from_str(&child_ids_json).map_err(|e| err("decode child_ids", e))?;
     let keywords: Vec<String> =
         serde_json::from_str(&keywords_json).map_err(|e| err("decode keywords", e))?;
-    let section_aliases: Vec<String> =
-        serde_json::from_str(&section_aliases_json).map_err(|e| err("decode section_aliases", e))?;
+    let section_aliases: Vec<String> = serde_json::from_str(&section_aliases_json)
+        .map_err(|e| err("decode section_aliases", e))?;
     let mut child_ids = Vec::with_capacity(child_strs.len());
     for c in child_strs {
         child_ids.push(NodeId::new(c)?);
@@ -306,10 +308,22 @@ pub async fn list_documents(pool: &MsPool) -> Result<Vec<DocumentEntry>> {
     let mut out = Vec::with_capacity(rows.len());
     for row in &rows {
         let raw_text_hash = opt_bytes(row, 7, "raw_text_hash")?.and_then(|b| {
-            if b.len() == 32 { let mut a = [0u8; 32]; a.copy_from_slice(&b); Some(a) } else { None }
+            if b.len() == 32 {
+                let mut a = [0u8; 32];
+                a.copy_from_slice(&b);
+                Some(a)
+            } else {
+                None
+            }
         });
         let structural_hash = opt_bytes(row, 8, "structural_hash")?.and_then(|b| {
-            if b.len() == 32 { let mut a = [0u8; 32]; a.copy_from_slice(&b); Some(a) } else { None }
+            if b.len() == 32 {
+                let mut a = [0u8; 32];
+                a.copy_from_slice(&b);
+                Some(a)
+            } else {
+                None
+            }
         });
         let document_type = opt_str(row, 9, "document_type")?
             .as_deref()

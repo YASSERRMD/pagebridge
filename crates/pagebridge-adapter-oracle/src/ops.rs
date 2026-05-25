@@ -10,7 +10,9 @@ use crate::{level_from_i32, level_to_i32};
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::id::{DocId, NodeId};
 use pagebridge_core::record::{NodeRecord, NodeSummary};
-use pagebridge_core::types::{AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry};
+use pagebridge_core::types::{
+    AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry,
+};
 
 #[allow(clippy::too_many_lines)]
 fn extract_node(row: &oracle::Row) -> Result<NodeRecord> {
@@ -33,8 +35,9 @@ fn extract_node(row: &oracle::Row) -> Result<NodeRecord> {
     let created_at: i64 = row.get("created_at").map_err(|e| err("created_at", e))?;
     let updated_at: i64 = row.get("updated_at").map_err(|e| err("updated_at", e))?;
     let source_hash_blob: Vec<u8> = row.get("source_hash").map_err(|e| err("source_hash", e))?;
-    let canonical_section: Option<String> =
-        row.get("canonical_section").map_err(|e| err("canonical_section", e))?;
+    let canonical_section: Option<String> = row
+        .get("canonical_section")
+        .map_err(|e| err("canonical_section", e))?;
     let section_aliases_json: String = row
         .get::<Option<String>>("section_aliases")
         .map_err(|e| err("section_aliases", e))?
@@ -48,8 +51,8 @@ fn extract_node(row: &oracle::Row) -> Result<NodeRecord> {
         serde_json::from_str(&child_ids_json).map_err(|e| err("decode child_ids", e))?;
     let keywords: Vec<String> =
         serde_json::from_str(&keywords_json).map_err(|e| err("decode keywords", e))?;
-    let section_aliases: Vec<String> =
-        serde_json::from_str(&section_aliases_json).map_err(|e| err("decode section_aliases", e))?;
+    let section_aliases: Vec<String> = serde_json::from_str(&section_aliases_json)
+        .map_err(|e| err("decode section_aliases", e))?;
     let mut child_ids = Vec::with_capacity(child_strs.len());
     for c in child_strs {
         child_ids.push(NodeId::new(c)?);
@@ -281,17 +284,27 @@ pub async fn list_documents(pool: &OraclePool) -> Result<Vec<DocumentEntry>> {
             let root_node_id: String = row.get(4).map_err(|e| err("root", e))?;
             let leaf_count: i32 = row.get(5).map_err(|e| err("leaf_count", e))?;
             let byte_count: i64 = row.get(6).map_err(|e| err("byte_count", e))?;
-            let raw_hash_blob: Option<Vec<u8>> =
-                row.get(7).map_err(|e| err("raw_text_hash", e))?;
+            let raw_hash_blob: Option<Vec<u8>> = row.get(7).map_err(|e| err("raw_text_hash", e))?;
             let struct_hash_blob: Option<Vec<u8>> =
                 row.get(8).map_err(|e| err("structural_hash", e))?;
-            let doc_type_str: Option<String> =
-                row.get(9).map_err(|e| err("document_type", e))?;
+            let doc_type_str: Option<String> = row.get(9).map_err(|e| err("document_type", e))?;
             let raw_text_hash = raw_hash_blob.and_then(|b| {
-                if b.len() == 32 { let mut a = [0u8; 32]; a.copy_from_slice(&b); Some(a) } else { None }
+                if b.len() == 32 {
+                    let mut a = [0u8; 32];
+                    a.copy_from_slice(&b);
+                    Some(a)
+                } else {
+                    None
+                }
             });
             let structural_hash = struct_hash_blob.and_then(|b| {
-                if b.len() == 32 { let mut a = [0u8; 32]; a.copy_from_slice(&b); Some(a) } else { None }
+                if b.len() == 32 {
+                    let mut a = [0u8; 32];
+                    a.copy_from_slice(&b);
+                    Some(a)
+                } else {
+                    None
+                }
             });
             out.push(DocumentEntry {
                 doc_id: DocId::new(doc_id)?,
