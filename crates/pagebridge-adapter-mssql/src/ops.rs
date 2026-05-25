@@ -303,6 +303,7 @@ pub async fn list_documents(pool: &MsPool) -> Result<Vec<DocumentEntry>> {
             byte_count: req_i64(row, 6, "byte_count")? as u64,
             raw_text_hash: None,
             structural_hash: None,
+            document_type: None,
         });
     }
     Ok(out)
