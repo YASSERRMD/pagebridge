@@ -35,10 +35,15 @@ const STATEMENTS: &[&str] = &[
         created_at BIGINT NOT NULL,
         updated_at BIGINT NOT NULL,
         source_hash VARBINARY(32) NOT NULL,
+        canonical_section TEXT NULL,
+        section_aliases JSON NOT NULL DEFAULT (JSON_ARRAY()),
         INDEX idx_pb_nodes_doc (doc_id),
         INDEX idx_pb_nodes_parent (parent_id),
         FULLTEXT KEY ft_pb_nodes (title, routing_summary, summary)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+    // Incremental migrations for existing databases.
+    "ALTER TABLE pagebridge_nodes ADD COLUMN IF NOT EXISTS canonical_section TEXT NULL",
+    "ALTER TABLE pagebridge_nodes ADD COLUMN IF NOT EXISTS section_aliases JSON NOT NULL DEFAULT (JSON_ARRAY())",
     "CREATE TABLE IF NOT EXISTS pagebridge_docs (
         doc_id VARCHAR(128) NOT NULL PRIMARY KEY,
         title TEXT NOT NULL,
@@ -46,8 +51,14 @@ const STATEMENTS: &[&str] = &[
         ingested_at BIGINT NOT NULL,
         root_node_id VARCHAR(512) NOT NULL,
         leaf_count INT NOT NULL,
-        byte_count BIGINT NOT NULL
+        byte_count BIGINT NOT NULL,
+        raw_text_hash VARBINARY(32) NULL,
+        structural_hash VARBINARY(32) NULL,
+        document_type VARCHAR(64) NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+    "ALTER TABLE pagebridge_docs ADD COLUMN IF NOT EXISTS raw_text_hash VARBINARY(32) NULL",
+    "ALTER TABLE pagebridge_docs ADD COLUMN IF NOT EXISTS structural_hash VARBINARY(32) NULL",
+    "ALTER TABLE pagebridge_docs ADD COLUMN IF NOT EXISTS document_type VARCHAR(64) NULL",
     "CREATE TABLE IF NOT EXISTS pagebridge_raw (
         doc_id VARCHAR(128) NOT NULL,
         offset_start BIGINT NOT NULL,

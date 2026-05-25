@@ -10,7 +10,9 @@ use crate::{level_from_i32, level_to_i32};
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::id::{DocId, NodeId};
 use pagebridge_core::record::{NodeRecord, NodeSummary};
-use pagebridge_core::types::{AdapterStats, DocumentEntry, SearchHit, SummaryCacheEntry};
+use pagebridge_core::types::{
+    AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry,
+};
 
 #[allow(clippy::too_many_lines)]
 fn extract_node(row: &oracle::Row) -> Result<NodeRecord> {
@@ -33,6 +35,13 @@ fn extract_node(row: &oracle::Row) -> Result<NodeRecord> {
     let created_at: i64 = row.get("created_at").map_err(|e| err("created_at", e))?;
     let updated_at: i64 = row.get("updated_at").map_err(|e| err("updated_at", e))?;
     let source_hash_blob: Vec<u8> = row.get("source_hash").map_err(|e| err("source_hash", e))?;
+    let canonical_section: Option<String> = row
+        .get("canonical_section")
+        .map_err(|e| err("canonical_section", e))?;
+    let section_aliases_json: String = row
+        .get::<Option<String>>("section_aliases")
+        .map_err(|e| err("section_aliases", e))?
+        .unwrap_or_else(|| "[]".to_owned());
 
     let mut hash = [0u8; 32];
     let len = source_hash_blob.len().min(32);
@@ -42,6 +51,8 @@ fn extract_node(row: &oracle::Row) -> Result<NodeRecord> {
         serde_json::from_str(&child_ids_json).map_err(|e| err("decode child_ids", e))?;
     let keywords: Vec<String> =
         serde_json::from_str(&keywords_json).map_err(|e| err("decode keywords", e))?;
+    let section_aliases: Vec<String> = serde_json::from_str(&section_aliases_json)
+        .map_err(|e| err("decode section_aliases", e))?;
     let mut child_ids = Vec::with_capacity(child_strs.len());
     for c in child_strs {
         child_ids.push(NodeId::new(c)?);
@@ -67,13 +78,14 @@ fn extract_node(row: &oracle::Row) -> Result<NodeRecord> {
         created_at,
         updated_at,
         source_hash: hash,
-        canonical_section: None,
-        section_aliases: vec![],
+        canonical_section,
+        section_aliases,
     })
 }
 
 const NODE_COLS: &str = "node_id, doc_id, parent_id, title, node_level, routing_summary, summary, \
-    child_ids, span_start, span_end, page_start, page_end, keywords, is_leaf, created_at, updated_at, source_hash";
+    child_ids, span_start, span_end, page_start, page_end, keywords, is_leaf, created_at, updated_at, \
+    source_hash, canonical_section, NVL(section_aliases, '[]') AS section_aliases";
 
 pub async fn upsert_node(pool: &OraclePool, node: &NodeRecord) -> Result<()> {
     node.validate()?;
@@ -101,6 +113,9 @@ pub async fn upsert_node(pool: &OraclePool, node: &NodeRecord) -> Result<()> {
     let created_at = node.created_at;
     let updated_at = node.updated_at;
     let hash = node.source_hash.to_vec();
+    let canonical_section = node.canonical_section.clone();
+    let section_aliases_json =
+        serde_json::to_string(&node.section_aliases).map_err(|e| err("encode aliases", e))?;
     pool.with_conn(move |conn| {
         let sql = "MERGE INTO pagebridge_nodes t
             USING (SELECT :1 AS node_id FROM dual) s
@@ -110,14 +125,14 @@ pub async fn upsert_node(pool: &OraclePool, node: &NodeRecord) -> Result<()> {
                 routing_summary = :6, summary = :7, child_ids = :8,
                 span_start = :9, span_end = :10, page_start = :11, page_end = :12,
                 keywords = :13, is_leaf = :14, created_at = :15, updated_at = :16,
-                source_hash = :17
+                source_hash = :17, canonical_section = :18, section_aliases = :19
             WHEN NOT MATCHED THEN INSERT
                 (node_id, doc_id, parent_id, title, node_level, routing_summary, summary, child_ids,
                  span_start, span_end, page_start, page_end, keywords, is_leaf, created_at,
-                 updated_at, source_hash)
+                 updated_at, source_hash, canonical_section, section_aliases)
                 VALUES (:1, :2, :3, :4, :5, :6, :7, :8,
-                        :9, :10, :11, :12, :13, :14, :15, :16, :17)";
-        let params: [&dyn ToSql; 17] = [
+                        :9, :10, :11, :12, :13, :14, :15, :16, :17, :18, :19)";
+        let params: [&dyn ToSql; 19] = [
             &node_id,
             &doc_id,
             &parent_id,
@@ -135,6 +150,8 @@ pub async fn upsert_node(pool: &OraclePool, node: &NodeRecord) -> Result<()> {
             &created_at,
             &updated_at,
             &hash,
+            &canonical_section,
+            &section_aliases_json,
         ];
         conn.execute(sql, &params).map_err(|e| err("upsert", e))?;
         conn.commit().map_err(|e| err("commit", e))?;
@@ -253,8 +270,9 @@ pub async fn delete_document(pool: &OraclePool, doc_id: &DocId) -> Result<()> {
 pub async fn list_documents(pool: &OraclePool) -> Result<Vec<DocumentEntry>> {
     pool.with_conn(|conn| {
         let sql =
-            "SELECT doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count
-                   FROM pagebridge_docs ORDER BY doc_id";
+            "SELECT doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count,
+                    raw_text_hash, structural_hash, document_type
+             FROM pagebridge_docs ORDER BY doc_id";
         let rows = conn.query(sql, &[]).map_err(|e| err("list", e))?;
         let mut out = Vec::new();
         for r in rows {
@@ -266,6 +284,28 @@ pub async fn list_documents(pool: &OraclePool) -> Result<Vec<DocumentEntry>> {
             let root_node_id: String = row.get(4).map_err(|e| err("root", e))?;
             let leaf_count: i32 = row.get(5).map_err(|e| err("leaf_count", e))?;
             let byte_count: i64 = row.get(6).map_err(|e| err("byte_count", e))?;
+            let raw_hash_blob: Option<Vec<u8>> = row.get(7).map_err(|e| err("raw_text_hash", e))?;
+            let struct_hash_blob: Option<Vec<u8>> =
+                row.get(8).map_err(|e| err("structural_hash", e))?;
+            let doc_type_str: Option<String> = row.get(9).map_err(|e| err("document_type", e))?;
+            let raw_text_hash = raw_hash_blob.and_then(|b| {
+                if b.len() == 32 {
+                    let mut a = [0u8; 32];
+                    a.copy_from_slice(&b);
+                    Some(a)
+                } else {
+                    None
+                }
+            });
+            let structural_hash = struct_hash_blob.and_then(|b| {
+                if b.len() == 32 {
+                    let mut a = [0u8; 32];
+                    a.copy_from_slice(&b);
+                    Some(a)
+                } else {
+                    None
+                }
+            });
             out.push(DocumentEntry {
                 doc_id: DocId::new(doc_id)?,
                 title,
@@ -274,9 +314,9 @@ pub async fn list_documents(pool: &OraclePool) -> Result<Vec<DocumentEntry>> {
                 root_node_id: NodeId::new(root_node_id)?,
                 leaf_count: leaf_count as u32,
                 byte_count: byte_count as u64,
-                raw_text_hash: None,
-                structural_hash: None,
-                document_type: None,
+                raw_text_hash,
+                structural_hash,
+                document_type: doc_type_str.as_deref().and_then(DocumentType::parse_tag),
             });
         }
         Ok(out)
@@ -292,17 +332,22 @@ pub async fn upsert_document(pool: &OraclePool, doc: &DocumentEntry) -> Result<(
     let r = doc.root_node_id.as_str().to_owned();
     let lc = doc.leaf_count as i32;
     let bc = doc.byte_count as i64;
+    let rth = doc.raw_text_hash.as_ref().map(<[u8]>::to_vec);
+    let sh = doc.structural_hash.as_ref().map(<[u8]>::to_vec);
+    let dt = doc.document_type.map(|dt| dt.as_str().to_owned());
     pool.with_conn(move |conn| {
         let sql = "MERGE INTO pagebridge_docs t
             USING (SELECT :1 AS doc_id FROM dual) s
             ON (t.doc_id = s.doc_id)
             WHEN MATCHED THEN UPDATE SET
                 title = :2, source_kind = :3, ingested_at = :4,
-                root_node_id = :5, leaf_count = :6, byte_count = :7
+                root_node_id = :5, leaf_count = :6, byte_count = :7,
+                raw_text_hash = :8, structural_hash = :9, document_type = :10
             WHEN NOT MATCHED THEN INSERT
-                (doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count)
-                VALUES (:1, :2, :3, :4, :5, :6, :7)";
-        let params: [&dyn ToSql; 7] = [&d, &t, &k, &i, &r, &lc, &bc];
+                (doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count,
+                 raw_text_hash, structural_hash, document_type)
+                VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10)";
+        let params: [&dyn ToSql; 10] = [&d, &t, &k, &i, &r, &lc, &bc, &rth, &sh, &dt];
         conn.execute(sql, &params)
             .map_err(|e| err("upsert doc", e))?;
         conn.commit().map_err(|e| err("commit", e))?;

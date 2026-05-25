@@ -34,9 +34,16 @@ const STATEMENTS: &[&str] = &[
           is_leaf NUMBER(1) NOT NULL,
           created_at NUMBER(19) NOT NULL,
           updated_at NUMBER(19) NOT NULL,
-          source_hash RAW(32) NOT NULL
+          source_hash RAW(32) NOT NULL,
+          canonical_section CLOB,
+          section_aliases CLOB DEFAULT ''[]''
         )';
      EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 THEN RAISE; END IF; END;",
+    // Incremental migrations: ORA-01430 = column already exists.
+    "BEGIN EXECUTE IMMEDIATE 'ALTER TABLE pagebridge_nodes ADD canonical_section CLOB';
+     EXCEPTION WHEN OTHERS THEN IF SQLCODE != -1430 THEN RAISE; END IF; END;",
+    "BEGIN EXECUTE IMMEDIATE 'ALTER TABLE pagebridge_nodes ADD section_aliases CLOB DEFAULT ''[]''';
+     EXCEPTION WHEN OTHERS THEN IF SQLCODE != -1430 THEN RAISE; END IF; END;",
     "BEGIN EXECUTE IMMEDIATE 'CREATE INDEX idx_pb_nodes_doc ON pagebridge_nodes(doc_id)';
      EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 AND SQLCODE != -1408 THEN RAISE; END IF; END;",
     "BEGIN EXECUTE IMMEDIATE 'CREATE INDEX idx_pb_nodes_parent ON pagebridge_nodes(parent_id)';
@@ -49,9 +56,18 @@ const STATEMENTS: &[&str] = &[
           ingested_at NUMBER(19) NOT NULL,
           root_node_id VARCHAR2(512) NOT NULL,
           leaf_count NUMBER(10) NOT NULL,
-          byte_count NUMBER(19) NOT NULL
+          byte_count NUMBER(19) NOT NULL,
+          raw_text_hash RAW(32),
+          structural_hash RAW(32),
+          document_type VARCHAR2(64)
         )';
      EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 THEN RAISE; END IF; END;",
+    "BEGIN EXECUTE IMMEDIATE 'ALTER TABLE pagebridge_docs ADD raw_text_hash RAW(32)';
+     EXCEPTION WHEN OTHERS THEN IF SQLCODE != -1430 THEN RAISE; END IF; END;",
+    "BEGIN EXECUTE IMMEDIATE 'ALTER TABLE pagebridge_docs ADD structural_hash RAW(32)';
+     EXCEPTION WHEN OTHERS THEN IF SQLCODE != -1430 THEN RAISE; END IF; END;",
+    "BEGIN EXECUTE IMMEDIATE 'ALTER TABLE pagebridge_docs ADD document_type VARCHAR2(64)';
+     EXCEPTION WHEN OTHERS THEN IF SQLCODE != -1430 THEN RAISE; END IF; END;",
     "BEGIN EXECUTE IMMEDIATE '
         CREATE TABLE pagebridge_raw (
           doc_id VARCHAR2(128) NOT NULL,

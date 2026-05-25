@@ -3,7 +3,9 @@
 use pagebridge_core::error::{PagebridgeError, Result};
 use pagebridge_core::id::{DocId, NodeId};
 use pagebridge_core::record::{NodeRecord, NodeSummary};
-use pagebridge_core::types::{AdapterStats, DocumentEntry, SearchHit, SummaryCacheEntry};
+use pagebridge_core::types::{
+    AdapterStats, DocumentEntry, DocumentType, SearchHit, SummaryCacheEntry,
+};
 use tiberius::{Query, Row};
 
 use crate::{err, level_from_i32, level_to_i32, MsPool};
@@ -74,6 +76,8 @@ fn row_to_node(row: &Row) -> Result<NodeRecord> {
     let created_at = req_i64(row, 14, "created_at")?;
     let updated_at = req_i64(row, 15, "updated_at")?;
     let source_hash_blob = req_bytes(row, 16, "source_hash")?;
+    let canonical_section = opt_str(row, 17, "canonical_section")?;
+    let section_aliases_json = req_str(row, 18, "section_aliases")?;
 
     let mut hash = [0u8; 32];
     let len = source_hash_blob.len().min(32);
@@ -83,6 +87,8 @@ fn row_to_node(row: &Row) -> Result<NodeRecord> {
         serde_json::from_str(&child_ids_json).map_err(|e| err("decode child_ids", e))?;
     let keywords: Vec<String> =
         serde_json::from_str(&keywords_json).map_err(|e| err("decode keywords", e))?;
+    let section_aliases: Vec<String> = serde_json::from_str(&section_aliases_json)
+        .map_err(|e| err("decode section_aliases", e))?;
     let mut child_ids = Vec::with_capacity(child_strs.len());
     for c in child_strs {
         child_ids.push(NodeId::new(c)?);
@@ -108,14 +114,15 @@ fn row_to_node(row: &Row) -> Result<NodeRecord> {
         created_at,
         updated_at,
         source_hash: hash,
-        canonical_section: None,
-        section_aliases: vec![],
+        canonical_section,
+        section_aliases,
     })
 }
 
 const NODE_COLS: &str =
     "node_id, doc_id, parent_id, title, level, routing_summary, summary, child_ids, \
-     span_start, span_end, page_start, page_end, keywords, is_leaf, created_at, updated_at, source_hash";
+     span_start, span_end, page_start, page_end, keywords, is_leaf, created_at, updated_at, \
+     source_hash, canonical_section, ISNULL(section_aliases, '[]') AS section_aliases";
 
 pub async fn upsert_node(pool: &MsPool, node: &NodeRecord) -> Result<()> {
     node.validate()?;
@@ -129,6 +136,8 @@ pub async fn upsert_node(pool: &MsPool, node: &NodeRecord) -> Result<()> {
     .map_err(|e| err("encode child_ids", e))?;
     let keywords_json = serde_json::to_string(&node.keywords).map_err(|e| err("encode kw", e))?;
 
+    let section_aliases_json =
+        serde_json::to_string(&node.section_aliases).map_err(|e| err("encode aliases", e))?;
     let mut conn = pool.get().await.map_err(|e| err("upsert conn", e))?;
     let sql = "MERGE INTO pagebridge_nodes AS target
         USING (SELECT @P1 AS node_id) AS src
@@ -138,13 +147,13 @@ pub async fn upsert_node(pool: &MsPool, node: &NodeRecord) -> Result<()> {
             routing_summary = @P6, summary = @P7, child_ids = @P8,
             span_start = @P9, span_end = @P10, page_start = @P11, page_end = @P12,
             keywords = @P13, is_leaf = @P14, created_at = @P15, updated_at = @P16,
-            source_hash = @P17
+            source_hash = @P17, canonical_section = @P18, section_aliases = @P19
         WHEN NOT MATCHED THEN INSERT
             (node_id, doc_id, parent_id, title, level, routing_summary, summary, child_ids,
              span_start, span_end, page_start, page_end, keywords, is_leaf, created_at,
-             updated_at, source_hash)
+             updated_at, source_hash, canonical_section, section_aliases)
         VALUES (@P1, @P2, @P3, @P4, @P5, @P6, @P7, @P8,
-                @P9, @P10, @P11, @P12, @P13, @P14, @P15, @P16, @P17);";
+                @P9, @P10, @P11, @P12, @P13, @P14, @P15, @P16, @P17, @P18, @P19);";
     let mut q = Query::new(sql);
     q.bind(node.node_id.as_str());
     q.bind(node.doc_id.as_str());
@@ -166,6 +175,8 @@ pub async fn upsert_node(pool: &MsPool, node: &NodeRecord) -> Result<()> {
     q.bind(node.created_at);
     q.bind(node.updated_at);
     q.bind(node.source_hash.to_vec());
+    q.bind(node.canonical_section.clone());
+    q.bind(section_aliases_json);
     q.execute(&mut conn).await.map_err(|e| err("upsert", e))?;
     Ok(())
 }
@@ -285,7 +296,8 @@ pub async fn list_documents(pool: &MsPool) -> Result<Vec<DocumentEntry>> {
     let mut conn = pool.get().await.map_err(|e| err("list conn", e))?;
     let rows = conn
         .simple_query(
-            "SELECT doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count
+            "SELECT doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count,
+                    raw_text_hash, structural_hash, document_type
              FROM pagebridge_docs ORDER BY doc_id",
         )
         .await
@@ -295,6 +307,27 @@ pub async fn list_documents(pool: &MsPool) -> Result<Vec<DocumentEntry>> {
         .map_err(|e| err("list rows", e))?;
     let mut out = Vec::with_capacity(rows.len());
     for row in &rows {
+        let raw_text_hash = opt_bytes(row, 7, "raw_text_hash")?.and_then(|b| {
+            if b.len() == 32 {
+                let mut a = [0u8; 32];
+                a.copy_from_slice(&b);
+                Some(a)
+            } else {
+                None
+            }
+        });
+        let structural_hash = opt_bytes(row, 8, "structural_hash")?.and_then(|b| {
+            if b.len() == 32 {
+                let mut a = [0u8; 32];
+                a.copy_from_slice(&b);
+                Some(a)
+            } else {
+                None
+            }
+        });
+        let document_type = opt_str(row, 9, "document_type")?
+            .as_deref()
+            .and_then(DocumentType::parse_tag);
         out.push(DocumentEntry {
             doc_id: DocId::new(req_str(row, 0, "doc_id")?)?,
             title: req_str(row, 1, "title")?,
@@ -303,9 +336,9 @@ pub async fn list_documents(pool: &MsPool) -> Result<Vec<DocumentEntry>> {
             root_node_id: NodeId::new(req_str(row, 4, "root_node_id")?)?,
             leaf_count: req_i32(row, 5, "leaf_count")? as u32,
             byte_count: req_i64(row, 6, "byte_count")? as u64,
-            raw_text_hash: None,
-            structural_hash: None,
-            document_type: None,
+            raw_text_hash,
+            structural_hash,
+            document_type,
         });
     }
     Ok(out)
@@ -318,10 +351,12 @@ pub async fn upsert_document(pool: &MsPool, doc: &DocumentEntry) -> Result<()> {
         ON t.doc_id = s.doc_id
         WHEN MATCHED THEN UPDATE SET
             title = @P2, source_kind = @P3, ingested_at = @P4,
-            root_node_id = @P5, leaf_count = @P6, byte_count = @P7
+            root_node_id = @P5, leaf_count = @P6, byte_count = @P7,
+            raw_text_hash = @P8, structural_hash = @P9, document_type = @P10
         WHEN NOT MATCHED THEN INSERT
-            (doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count)
-            VALUES (@P1, @P2, @P3, @P4, @P5, @P6, @P7);";
+            (doc_id, title, source_kind, ingested_at, root_node_id, leaf_count, byte_count,
+             raw_text_hash, structural_hash, document_type)
+            VALUES (@P1, @P2, @P3, @P4, @P5, @P6, @P7, @P8, @P9, @P10);";
     let mut q = Query::new(sql);
     q.bind(doc.doc_id.as_str());
     q.bind(doc.title.as_str());
@@ -330,6 +365,9 @@ pub async fn upsert_document(pool: &MsPool, doc: &DocumentEntry) -> Result<()> {
     q.bind(doc.root_node_id.as_str());
     q.bind(doc.leaf_count as i32);
     q.bind(doc.byte_count as i64);
+    q.bind(doc.raw_text_hash.map(|h| h.to_vec()));
+    q.bind(doc.structural_hash.map(|h| h.to_vec()));
+    q.bind(doc.document_type.map(|dt| dt.as_str().to_owned()));
     q.execute(&mut conn)
         .await
         .map_err(|e| err("upsert doc", e))?;
