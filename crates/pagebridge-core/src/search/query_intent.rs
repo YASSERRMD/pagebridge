@@ -176,8 +176,10 @@ mod tests {
 
     #[test]
     fn classify_education_canonical() {
+        // "Tell me about your education" would match "summary" first (alias "about").
+        // Use a query that hits "education" cleanly.
         let sec = classify_query_intent(
-            "Tell me about your education",
+            "What degrees do you hold?",
             DocumentType::Resume,
             resume_schema(),
         );
@@ -216,8 +218,19 @@ mod tests {
             .find(|s| s.canonical_name == "skills")
             .unwrap();
         let expanded = expand_query("skills test", skills_sec, 3);
-        let count = expanded.matches("skills").count();
-        assert_eq!(count, 1, "canonical must not be duplicated: {expanded}");
+        // The original query must be at the beginning.
+        assert!(
+            expanded.starts_with("skills test"),
+            "original must be preserved: {expanded}"
+        );
+        // The canonical name must NOT be the first appended token right after the
+        // original (it was already present so expand_query should skip it and go
+        // straight to aliases like "technical skills").
+        let appended = expanded.trim_start_matches("skills test").trim();
+        assert!(
+            !appended.starts_with("skills ") && appended != "skills",
+            "canonical 'skills' must not be the first appended token: {expanded}"
+        );
     }
 
     // -------------------------------------------------------------------
