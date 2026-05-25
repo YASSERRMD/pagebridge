@@ -18,6 +18,7 @@ pub mod prompts;
 pub mod record;
 pub mod replication;
 pub mod search;
+pub mod section_schema;
 pub mod trace;
 pub mod types;
 pub mod workspace;
@@ -46,6 +47,7 @@ pub use llm_policy::{
 pub use prompts::{PromptContext, PromptLibrary};
 pub use record::{NodeLevel, NodeRecord, NodeSummary};
 pub use replication::{InvalidationEvent, InvalidationKind, ReplicationConfig, ReplicationRole};
+pub use section_schema::{document_schema_for, DocumentSchema, SectionImportance, SectionSchema};
 pub use types::{
     AdapterStats, Answer, AnswerChunk, Citation, DiffMode, DocumentEntry, DocumentHandle,
     DocumentIngestHandle, DocumentType, IngestParams, Navigation, NavigationConfig,
